@@ -1,0 +1,54 @@
+services:
+  hmm-laravel: &laravel
+    container_name: hmm-laravel
+    build:
+      dockerfile: containers/Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+        USER_NAME: unit
+    volumes:
+      - ./:/var/www
+      - ./containers/configs/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+      - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
+    ports:
+      - '8000:80'
+    entrypoint: /docker-entrypoint.d/entrypoint.sh
+    command:
+      - "unitd"
+      - "--no-daemon"
+      - "--control"
+      - "unix:/var/run/control.unit.sock"
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  hmm-node-dev:
+    <<: *laravel
+    container_name: hmm-node-dev
+    entrypoint: /usr/local/bin/docker-entrypoint.sh
+    ports:
+      - '5173:5173'
+    command: >
+      sh -c "npm run dev"
+
+  hmm-db:
+    container_name: hmm-db
+    build:
+      dockerfile: containers/percona.Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+    environment:
+      MYSQL_USER: alex
+      MYSQL_PASSWORD: 1
+      MYSQL_DATABASE: hmm
+      MYSQL_ROOT_PASSWORD: 1
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./containers/init-scripts/percona-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./var/data/percona:/var/lib/mysql
+      - ./var/logs/percona:/var/log/mysql
+      - /etc/localtime:/etc/localtime:ro

@@ -1,0 +1,54 @@
+{
+  "listeners": {
+    "*:80": {
+      "pass": "routes"
+    }
+  },
+
+  "routes": [
+    {
+      "match": {
+        "uri": [
+          "/build/sw.js"
+        ]
+      },
+      "action": {
+        "pass": "applications/hmm/index"
+      }
+    },
+    {
+      "match": {
+        "uri": [
+          "/assets/*",
+          "/static/*"
+        ]
+      },
+
+      "action": {
+        "share":"/var/www/public$uri"
+      }
+    },
+    {
+      "action": {
+        "share": "/var/www/public$uri",
+        "fallback": {
+          "pass": "applications/hmm/index"
+        }
+      }
+    }
+  ],
+
+  "applications": {
+    "hmm": {
+      "type": "php",
+      "user": "unit",
+      "group": "unit",
+      "targets": {
+        "index": {
+          "root": "/var/www/public/",
+          "script": "index.php"
+        }
+      }
+    }
+  }
+}
