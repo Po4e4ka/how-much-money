@@ -2,7 +2,7 @@ services:
   hmm-laravel:
     container_name: hmm-laravel
     build:
-      dockerfile: containers/Dockerfile
+      dockerfile: containers/prod.Dockerfile
       args:
         USER_ID: 1000
         GROUP_ID: 1000
