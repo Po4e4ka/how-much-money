@@ -42,7 +42,7 @@ services:
     environment:
       MYSQL_USER: alex
       MYSQL_PASSWORD: 1
-      MYSQL_DATABASE: meme
+      MYSQL_DATABASE: hmm
       MYSQL_ROOT_PASSWORD: 1
     ports:
       - '4211:3306'
