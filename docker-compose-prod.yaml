@@ -33,7 +33,7 @@ services:
       - hmm_net
 
   hmm-db:
-    container_name: meme-db
+    container_name: hmm-db
     build:
       dockerfile: containers/percona.Dockerfile
       args:
