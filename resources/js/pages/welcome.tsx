@@ -27,7 +27,7 @@ export default function Welcome({
 
     return (
         <>
-            <Head title="Aurora Studio">
+            <Head title="HowMuchMoney">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700|fraunces:400,600,700"
@@ -60,10 +60,10 @@ export default function Welcome({
                             </div>
                             <div>
                                 <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--ink-soft)] dark:text-white/70">
-                                    Aurora Studio
+                                    Финансовый контур
                                 </p>
                                 <p className="font-display text-lg">
-                                    Ателье цифровых продуктов
+                                    Периоды, траты и ежедневник
                                 </p>
                             </div>
                         </div>
@@ -77,20 +77,20 @@ export default function Welcome({
                                 </Link>
                             ) : (
                                 <>
-                                    <Link
-                                        href={login()}
-                                        className="rounded-full border border-transparent px-4 py-2 text-[color:var(--ink-soft)] transition hover:text-[color:var(--ink)] dark:text-white/70 dark:hover:text-white"
-                                    >
-                                        Log in
-                                    </Link>
-                                    {canRegister && (
                                         <Link
-                                            href={register()}
-                                            className="rounded-full border border-black/10 bg-black px-4 py-2 text-white shadow-[0_10px_24px_-14px_rgba(0,0,0,0.7)] transition hover:-translate-y-0.5 hover:bg-black/90 dark:border-white/10 dark:bg-white dark:text-[#0f0d0b]"
+                                            href={login()}
+                                            className="rounded-full border border-transparent px-4 py-2 text-[color:var(--ink-soft)] transition hover:text-[color:var(--ink)] dark:text-white/70 dark:hover:text-white"
                                         >
-                                            Register
+                                            Войти
                                         </Link>
-                                    )}
+                                        {canRegister && (
+                                            <Link
+                                                href={register()}
+                                                className="rounded-full border border-black/10 bg-black px-4 py-2 text-white shadow-[0_10px_24px_-14px_rgba(0,0,0,0.7)] transition hover:-translate-y-0.5 hover:bg-black/90 dark:border-white/10 dark:bg-white dark:text-[#0f0d0b]"
+                                            >
+                                                Регистрация
+                                            </Link>
+                                        )}
                                 </>
                             )}
                         </nav>
@@ -103,22 +103,22 @@ export default function Welcome({
                                 style={delay(100)}
                             >
                                 <span className="h-px w-10 bg-[color:var(--accent)]" />
-                                Современный бренд-движок
+                                Финансовая ясность
                             </div>
                             <div className="space-y-6">
                                 <h1
                                     className="animate-reveal font-display text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl"
                                     style={delay(180)}
                                 >
-                                    Превращаем идеи в эстетику, которую хочется трогать.
+                                    Структурируем приходы и траты по периодам.
                                 </h1>
                                 <p
                                     className="animate-reveal max-w-xl text-base text-[color:var(--ink-soft)] dark:text-white/70 sm:text-lg"
                                     style={delay(260)}
                                 >
-                                    Сочетаем стратегию, UX и инженерную точность в один поток.
-                                    Запускаем продукт за недели, а не за кварталы, и держим
-                                    фокус на эмоциях пользователя.
+                                    Планируйте обязательные траты, фиксируйте фактические,
+                                    отслеживайте ежедневные расходы и держите остаток под
+                                    контролем в одном интерфейсе.
                                 </p>
                             </div>
                             <div
@@ -139,7 +139,7 @@ export default function Welcome({
                                 </Link>
                                 <div className="flex items-center gap-3 text-xs text-[color:var(--ink-soft)] dark:text-white/70">
                                     <span className="flex h-2 w-2 rounded-full bg-[color:var(--accent-2)]" />
-                                    12 запусков за 2025
+                                    Прозрачность на весь период
                                 </div>
                             </div>
                             <div
@@ -148,16 +148,16 @@ export default function Welcome({
                             >
                                 {[
                                     {
-                                        title: 'Стратегия',
-                                        text: 'Фокус на смыслах, позиционировании и цельном голосе.',
+                                        title: 'Периоды',
+                                        text: 'Чёткие даты, план и факт, без пересечений.',
                                     },
                                     {
-                                        title: 'Дизайн',
-                                        text: 'Системный визуал, который выдерживает масштаб.',
+                                        title: 'Траты',
+                                        text: 'Обязательные и сторонние — всё по полкам.',
                                     },
                                     {
-                                        title: 'Разработка',
-                                        text: 'Сборка на Laravel + React, стабильная и быстрая.',
+                                        title: 'Ежедневник',
+                                        text: 'Недели по дням и среднее в один клик.',
                                     },
                                 ].map((item) => (
                                     <div
@@ -184,32 +184,32 @@ export default function Welcome({
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--ink-soft)] dark:text-white/70">
-                                            Наблюдение
+                                            Обзор периода
                                         </p>
                                         <p className="font-display text-2xl">
-                                            Pulse Board
+                                            Контрольный центр
                                         </p>
                                     </div>
                                     <span className="rounded-full border border-black/10 px-3 py-1 text-xs text-[color:var(--ink-soft)] dark:border-white/10 dark:text-white/70">
-                                        Live 8:45
+                                        Данные в моменте
                                     </span>
                                 </div>
 
                                 <div className="mt-6 grid gap-4">
                                     {[
                                         {
-                                            label: 'North Star',
-                                            value: '98% clarity',
+                                            label: 'Приход',
+                                            value: '1 420 000 ₽',
                                             tone: 'var(--accent)',
                                         },
                                         {
-                                            label: 'Craft rhythm',
-                                            value: '4 sprints',
+                                            label: 'Обязательные',
+                                            value: '520 000 ₽',
                                             tone: 'var(--accent-2)',
                                         },
                                         {
-                                            label: 'Delight score',
-                                            value: '+36%',
+                                            label: 'Ежедневные',
+                                            value: '58 000 ₽',
                                             tone: 'var(--accent-3)',
                                         },
                                     ].map((row) => (
@@ -234,7 +234,7 @@ export default function Welcome({
                                 </div>
 
                                 <div className="mt-6 rounded-2xl border border-dashed border-black/15 bg-white/60 p-4 text-xs text-[color:var(--ink-soft)] dark:border-white/15 dark:bg-white/5 dark:text-white/70">
-                                    Синхронизация с продактом и маркетингом каждые 48 часов.
+                                    Сводим приход, обязательные и дневные траты в одной панели.
                                 </div>
                             </div>
                         </section>
@@ -246,18 +246,18 @@ export default function Welcome({
                                 Метод
                             </p>
                             <h2 className="mt-4 font-display text-3xl">
-                                От визуала к масштабируемой системе
+                                Финансовая дисциплина без перегруза
                             </h2>
                             <p className="mt-4 text-sm text-[color:var(--ink-soft)] dark:text-white/70">
-                                Мы строим дизайн-операционку вокруг вашего продукта: от
-                                локального прототипа до готовой библиотеки компонентов.
+                                Даты, траты и ежедневник в одном пространстве. Минимум
+                                действий — максимум прозрачности.
                             </p>
                             <div className="mt-6 grid gap-4 sm:grid-cols-2">
                                 {[
-                                    'Стратегия и позиционирование',
-                                    'Дизайн-система и UX-ритм',
-                                    'Инженерная сборка и DevOps',
-                                    'Контент и бренд-движок',
+                                    'Планирование периода',
+                                    'Фиксация обязательных трат',
+                                    'Сторонние расходы под контролем',
+                                    'Ежедневник и среднее в день',
                                 ].map((step, index) => (
                                     <div
                                         key={step}
@@ -273,9 +273,9 @@ export default function Welcome({
                         </div>
                         <div className="grid gap-4">
                             {[
-                                { value: '46+', label: 'Запусков за год' },
-                                { value: '12 дней', label: 'Средний цикл MVP' },
-                                { value: '4.9', label: 'Оценка команды' },
+                                { value: '16 дней', label: 'Средний период' },
+                                { value: '3 типа', label: 'Класса трат' },
+                                { value: '1 клик', label: 'Фокус на остаток' },
                             ].map((stat) => (
                                 <div
                                     key={stat.label}
@@ -294,7 +294,7 @@ export default function Welcome({
                                     Фокус
                                 </p>
                                 <p className="mt-3 font-display text-2xl">
-                                    Сильная команда важнее громкого релиза.
+                                    Контроль важнее объёма.
                                 </p>
                             </div>
                         </div>
@@ -307,7 +307,7 @@ export default function Welcome({
                                     Готовы начать
                                 </p>
                                 <h3 className="mt-3 font-display text-3xl">
-                                    Сделаем ваш продукт предметом желания.
+                                    Соберите финансовый период за минуты.
                                 </h3>
                             </div>
                             <Link
@@ -320,13 +320,13 @@ export default function Welcome({
                     </section>
 
                     <footer className="mt-12 flex flex-wrap items-center justify-between gap-4 text-xs text-[color:var(--ink-soft)] dark:text-white/60">
-                        <p>© 2026 Aurora Studio. Crafted with Laravel.</p>
+                        <p>© 2026 Финансовый контур. Сделано на Laravel.</p>
                         <div className="flex items-center gap-4">
                             <span className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
-                                Moscow + Remote
+                                В работе
                             </span>
                             <span className="rounded-full border border-black/10 px-3 py-1 dark:border-white/10">
-                                hello@aurora.studio
+                                help@howmuch.money
                             </span>
                         </div>
                     </footer>
