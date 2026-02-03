@@ -69,6 +69,14 @@ const calculateDaysInclusive = (start: string, end: string) => {
     return Math.max(1, diffDays + 1);
 };
 
+const toIntegerValue = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits === '') {
+        return '';
+    }
+    return Number(digits);
+};
+
 const formatDateKey = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -378,96 +386,109 @@ export default function PeriodDaily() {
                             return (
                                 <div
                                     key={`${block[0]?.toISOString() ?? index}`}
-                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 max-sm:min-h-[calc(100vh-320px)] max-sm:snap-start max-sm:mb-2 ${
+                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 max-sm:min-h-[calc(100vh-320px)] max-sm:snap-start max-sm:mb-2 max-sm:p-3 ${
                                         isLast ? 'max-sm:mb-24' : ''
                                     }`}
                                 >
-                                    <div className="grid gap-3">
-                                        {block.map((date) => {
-                                            const key = formatDateKey(date);
-                                            return (
-                                                <div
-                                                    key={key}
-                                                    className="grid gap-2"
-                                                >
-                                                    <span className="text-xs text-[#6a5d52] dark:text-white/60">
-                                                        {formatDateLabel(date)}
-                                                    </span>
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={
-                                                            dailyExpenses[key] ??
-                                                            ''
-                                                        }
-                                                        onChange={(event) =>
-                                                            setDailyExpenses(
-                                                                (prev) => {
-                                                                    const next =
-                                                                        {
-                                                                            ...prev,
-                                                                        };
-                                                                    if (
-                                                                        event
-                                                                            .target
-                                                                            .value ===
-                                                                        ''
-                                                                    ) {
-                                                                        delete next[
-                                                                            key
-                                                                        ];
-                                                                    } else {
-                                                                        next[
-                                                                            key
-                                                                        ] =
-                                                                            Number(
-                                                                                event
-                                                                                    .target
-                                                                                    .value,
-                                                                            );
-                                                                    }
-                                                                    return next;
-                                                                },
-                                                            )
-                                                        }
-                                                        onFocus={() => {
-                                                            if (
+                                    <div className="flex h-full flex-col gap-4">
+                                        <div className="flex-1">
+                                            <div className="grid gap-3 max-sm:gap-2">
+                                                {block.map((date) => {
+                                                    const key = formatDateKey(date);
+                                                    return (
+                                                        <div
+                                                            key={key}
+                                                            className="grid gap-2"
+                                                        >
+                                                        <span className="text-xs text-[#6a5d52] dark:text-white/60">
+                                                            {formatDateLabel(
+                                                                date,
+                                                            )}
+                                                        </span>
+                                                        <input
+                                                            type="number"
+                                                            min={0}
+                                                            step={1}
+                                                            inputMode="numeric"
+                                                            value={
                                                                 dailyExpenses[
                                                                     key
-                                                                ] === 0
-                                                            ) {
+                                                                ] ?? ''
+                                                            }
+                                                            onChange={(
+                                                                event,
+                                                            ) =>
                                                                 setDailyExpenses(
                                                                     (prev) => {
                                                                         const next =
                                                                             {
                                                                                 ...prev,
                                                                             };
-                                                                        delete next[
-                                                                            key
-                                                                        ];
+                                                                        if (
+                                                                            event
+                                                                                .target
+                                                                                .value ===
+                                                                            ''
+                                                                        ) {
+                                                                            delete next[
+                                                                                key
+                                                                            ];
+                                                                        } else {
+                                                                            next[
+                                                                                key
+                                                                            ] =
+                                                                                toIntegerValue(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ) || 0;
+                                                                        }
                                                                         return next;
                                                                     },
-                                                                );
+                                                                )
                                                             }
-                                                        }}
-                                                        onBlur={handleSave}
-                                                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5">
-                                        <span>Итого за неделю</span>
-                                        <span className="font-display text-sm tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
-                                            {formatCurrency(blockTotal)}
-                                        </span>
-                                        <span className="text-[#6a5d52] dark:text-white/60">
-                                            Среднее в день
-                                        </span>
-                                        <span className="font-display text-sm tabular-nums">
-                                            {formatCurrency(blockAverage)}
-                                        </span>
+                                                            onFocus={() => {
+                                                                if (
+                                                                    dailyExpenses[
+                                                                        key
+                                                                    ] === 0
+                                                                ) {
+                                                                    setDailyExpenses(
+                                                                        (
+                                                                            prev,
+                                                                        ) => {
+                                                                            const next =
+                                                                                {
+                                                                                    ...prev,
+                                                                                };
+                                                                            delete next[
+                                                                                key
+                                                                            ];
+                                                                            return next;
+                                                                        },
+                                                                    );
+                                                                }
+                                                            }}
+                                                            onBlur={handleSave}
+                                                            className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10 max-sm:px-2 max-sm:py-2 max-sm:text-xs"
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                            </div>
+                                        </div>
+                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5 max-sm:px-2 max-sm:py-2">
+                                            <span>Итого за неделю</span>
+                                            <span className="font-display text-sm tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                                                {formatCurrency(blockTotal)}
+                                            </span>
+                                            <span className="text-[#6a5d52] dark:text-white/60">
+                                                Среднее в день
+                                            </span>
+                                            <span className="font-display text-sm tabular-nums">
+                                                {formatCurrency(blockAverage)}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             );

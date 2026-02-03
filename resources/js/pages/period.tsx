@@ -12,6 +12,7 @@ type ExpenseItem = {
     name: string;
     plannedAmount: number | '';
     actualAmount: number | '';
+    actualTouched?: boolean;
 };
 
 type OffIncomeItem = {
@@ -103,6 +104,14 @@ const calculateDaysInclusive = (start: string, end: string) => {
     return Math.max(1, diffDays + 1);
 };
 
+const toIntegerValue = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits === '') {
+        return '';
+    }
+    return Number(digits);
+};
+
 type ExpensesBlockProps = {
     title: string;
     items: ExpenseItem[];
@@ -115,6 +124,7 @@ type ExpensesBlockProps = {
     totalDifference: number;
     idPrefix: string;
     onBlurField: () => void;
+    onAfterDelete: () => void;
 };
 
 type OffIncomeBlockProps = {
@@ -127,6 +137,7 @@ type OffIncomeBlockProps = {
     totalAmount: number;
     idPrefix: string;
     onBlurField: () => void;
+    onAfterDelete: () => void;
 };
 
 type IncomeBlockProps = {
@@ -189,6 +200,8 @@ const IncomeBlock = ({
                     <input
                         type="number"
                         min={0}
+                        step={1}
+                        inputMode="numeric"
                         value={item.amount}
                         onChange={(event) => {
                             const nextValue = event.target.value;
@@ -198,9 +211,7 @@ const IncomeBlock = ({
                                         ? {
                                               ...income,
                                               amount:
-                                                  nextValue === ''
-                                                      ? ''
-                                                      : Number(nextValue),
+                                                  toIntegerValue(nextValue),
                                           }
                                         : income,
                                 ),
@@ -255,6 +266,7 @@ const ExpensesBlock = ({
     totalDifference,
     idPrefix,
     onBlurField,
+    onAfterDelete,
 }: ExpensesBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -272,6 +284,7 @@ const ExpensesBlock = ({
                                     name: '',
                                     plannedAmount: '',
                                     actualAmount: '',
+                                    actualTouched: false,
                                 },
                             ])
                     }
@@ -337,6 +350,8 @@ const ExpensesBlock = ({
                     <input
                         type="number"
                         min={0}
+                        step={1}
+                        inputMode="numeric"
                         value={item.plannedAmount}
                         onChange={(event) => {
                             const nextValue = event.target.value;
@@ -346,9 +361,10 @@ const ExpensesBlock = ({
                                         ? {
                                               ...expense,
                                               plannedAmount:
-                                                  nextValue === ''
-                                                      ? ''
-                                                      : Number(nextValue),
+                                                  toIntegerValue(nextValue),
+                                              actualAmount: expense.actualTouched
+                                                  ? expense.actualAmount
+                                                  : toIntegerValue(nextValue),
                                           }
                                         : expense,
                                 ),
@@ -382,6 +398,8 @@ const ExpensesBlock = ({
                     <input
                         type="number"
                         min={0}
+                        step={1}
+                        inputMode="numeric"
                         value={item.actualAmount}
                         onChange={(event) => {
                             const nextValue = event.target.value;
@@ -391,9 +409,8 @@ const ExpensesBlock = ({
                                         ? {
                                               ...expense,
                                               actualAmount:
-                                                  nextValue === ''
-                                                      ? ''
-                                                      : Number(nextValue),
+                                                  toIntegerValue(nextValue),
+                                              actualTouched: true,
                                           }
                                         : expense,
                                 ),
@@ -447,6 +464,7 @@ const ExpensesBlock = ({
                                             (expense) => expense.id !== item.id,
                                         ),
                                     );
+                                    onAfterDelete();
                                 }
                             }}
                             aria-label={`Удалить трату ${index + 1}`}
@@ -498,6 +516,7 @@ const OffIncomeBlock = ({
     totalAmount,
     idPrefix,
     onBlurField,
+    onAfterDelete,
 }: OffIncomeBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -577,6 +596,8 @@ const OffIncomeBlock = ({
                     <input
                         type="number"
                         min={0}
+                        step={1}
+                        inputMode="numeric"
                         value={item.amount}
                         onChange={(event) => {
                             const nextValue = event.target.value;
@@ -585,10 +606,7 @@ const OffIncomeBlock = ({
                                     expense.id === item.id
                                         ? {
                                               ...expense,
-                                              amount:
-                                                  nextValue === ''
-                                                      ? ''
-                                                      : Number(nextValue),
+                                              amount: toIntegerValue(nextValue),
                                           }
                                         : expense,
                                 ),
@@ -629,6 +647,7 @@ const OffIncomeBlock = ({
                                             (expense) => expense.id !== item.id,
                                         ),
                                     );
+                                    onAfterDelete();
                                 }
                             }}
                             aria-label={`Удалить трату ${index + 1}`}
@@ -677,6 +696,7 @@ export default function Period() {
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const pendingSaveRef = useRef(false);
+    const [saveTick, setSaveTick] = useState(0);
 
     const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
     const hasFetchedRef = useRef(false);
@@ -748,8 +768,8 @@ export default function Period() {
         }
         return `${days} дней · ${formatMonthRange(startDate, endDate)}`;
     }, [days, startDate, endDate]);
-    const dailyAverage =
-        days > 0 ? (totalIncome - totalActualExpenses) / days : 0;
+    const plannedPeriodSum = totalIncome - totalPlannedExpenses;
+    const dailyAverage = days > 0 ? plannedPeriodSum / days : 0;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -834,6 +854,7 @@ export default function Period() {
                     name: item.name,
                     plannedAmount: item.planned_amount,
                     actualAmount: item.actual_amount,
+                    actualTouched: false,
                 })),
                 offIncomeExpenses: data.external_expenses.map((item) => ({
                     id: String(item.id),
@@ -951,6 +972,10 @@ export default function Period() {
         void handleSave();
     };
 
+    const requestSaveAfterChange = () => {
+        setSaveTick((prev) => prev + 1);
+    };
+
     useEffect(() => {
         void fetchPeriod();
     }, [periodId]);
@@ -961,6 +986,12 @@ export default function Period() {
             void handleSave();
         }
     }, [isSaving]);
+
+    useEffect(() => {
+        if (saveTick > 0) {
+            void handleSave();
+        }
+    }, [saveTick]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -1027,6 +1058,7 @@ export default function Period() {
                             totalDifference={totalDifference}
                             idPrefix="e"
                             onBlurField={handleSave}
+                            onAfterDelete={requestSaveAfterChange}
                         />
 
                         <OffIncomeBlock
@@ -1039,6 +1071,7 @@ export default function Period() {
                             totalAmount={totalOffIncome}
                             idPrefix="o"
                             onBlurField={handleSave}
+                            onAfterDelete={requestSaveAfterChange}
                         />
                     </div>
 
@@ -1108,61 +1141,97 @@ export default function Period() {
                                 </div>
                             )}
                         </div>
-                        <div className="rounded-2xl border border-black/10 bg-[#1c1a17] px-5 py-6 text-white shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
-                            <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                                Среднее в день
+                        <div className="rounded-2xl border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
+                            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                Планируемое среднее в день
                             </p>
-                            <p className="mt-2 text-xs text-white/60">
+                            <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
                                 (Приход − обязательные) / дни
                             </p>
                             <p className="mt-3 font-display text-2xl">
                                 {formatCurrency(dailyAverage)}
                             </p>
-                            <div className="mt-4 grid gap-3 text-xs text-white/70">
-                                <div className="h-px w-full bg-white/10" />
+
+                            <div className="mt-4 grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
+                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                    Планируемая сумма на период
+                                </p>
                                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                                    <span className="font-display tabular-nums text-[#7ce0b3]">
+                                    <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
                                         {formatCurrency(totalIncome)}
                                     </span>
-                                    <span className="text-white/60">−</span>
-                                    <span className="font-display tabular-nums text-[#ff8b7c]">
-                                        {formatCurrency(totalActualExpenses)}
+                                    <span className="text-black/50 dark:text-white/60">−</span>
+                                    <span className="font-display tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                                        {formatCurrency(totalPlannedExpenses)}
                                     </span>
-                                    <span className="text-white/60">=</span>
+                                    <span className="text-black/50 dark:text-white/60">=</span>
                                     <span
                                         className={`font-display tabular-nums ${
-                                            totalIncome - totalActualExpenses >=
+                                            plannedPeriodSum >= 0
+                                                ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                                                : 'text-[#b0352b] dark:text-[#ff8b7c]'
+                                        }`}
+                                    >
+                                        {formatSignedCurrency(plannedPeriodSum)}
+                                    </span>
+                                </div>
+
+                                <div className="text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
+                                    Приход − план = сумма в период
+                                </div>
+                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
+                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                    Фактический остаток
+                                </p>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
+                                    <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
+                                        {formatCurrency(plannedPeriodSum)}
+                                    </span>
+                                    <span
+                                        className={`font-display tabular-nums ${
+                                            totalDifference > 0
+                                                ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                                                : totalDifference < 0
+                                                  ? 'text-[#b0352b] dark:text-[#ff8b7c]'
+                                                  : 'text-[#6a5d52] dark:text-white/70'
+                                        }`}
+                                    >
+                                        {formatSignedCurrency(totalDifference).replace(
+                                            /^([+−-])/, // add space after sign
+                                            '$1 ',
+                                        )}
+                                    </span>
+                                    <span className="text-black/50 dark:text-white/60">−</span>
+                                    <span className="font-display tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                                        {formatCurrency(totalDailyExpenses)}
+                                    </span>
+                                    <span className="text-black/50 dark:text-white/60">=</span>
+                                    <span
+                                        className={`font-display tabular-nums ${
+                                            plannedPeriodSum +
+                                                totalDifference -
+                                                totalDailyExpenses >=
                                             0
-                                                ? 'text-[#7ce0b3]'
-                                                : 'text-[#ff8b7c]'
+                                                ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                                                : 'text-[#b0352b] dark:text-[#ff8b7c]'
                                         }`}
                                     >
                                         {formatSignedCurrency(
-                                            totalIncome - totalActualExpenses,
+                                            plannedPeriodSum +
+                                                totalDifference -
+                                                totalDailyExpenses,
                                         )}
                                     </span>
                                 </div>
-                                <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
-                                    Приход − траты = сумма в период
-                                </div>
-                                <div className="h-px w-full bg-white/10" />
-                                <div className="mt-4 text-xs text-white/60">
-                                    Остаток
-                                </div>
-                                <div className="mt-2 font-display text-2xl">
-                                    {formatCurrency(
-                                        totalIncome -
-                                            totalActualExpenses -
-                                            totalDailyExpenses,
-                                    )}
-                                </div>
-                                <div className="h-px w-full bg-white/10" />
-                                <div className="mt-4 text-xs text-white/60">
-                                    Факт среднее в день
-                                </div>
+                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
+                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                    Фактическое среднее в день за период
+                                </p>
                                 <div className="mt-2 font-display text-2xl">
                                     {formatCurrency(dailyActualAverage)}
                                 </div>
+
                             </div>
                         </div>
                     </div>
