@@ -20,13 +20,19 @@ type OffIncomeItem = {
     amount: number;
 };
 
+type IncomeItem = {
+    id: string;
+    name: string;
+    amount: number;
+};
+
 type PeriodData = {
     id: string;
     title: string;
     subtitle: string;
-    income: number;
     startDate: string;
     endDate: string;
+    incomes: IncomeItem[];
     expenses: ExpenseItem[];
     offIncomeExpenses: OffIncomeItem[];
     dailyExpenses: Record<string, number>;
@@ -37,9 +43,12 @@ const periodMocks: PeriodData[] = [
         id: 'p3',
         title: '05.02 — 20.02',
         subtitle: '16 дней · Февраль 2026',
-        income: 1420000,
         startDate: '2026-02-05',
         endDate: '2026-02-20',
+        incomes: [
+            { id: 'i31', name: 'Основной приход', amount: 1200000 },
+            { id: 'i32', name: 'Доп. услуги', amount: 220000 },
+        ],
         expenses: [
             {
                 id: 'e31',
@@ -73,9 +82,12 @@ const periodMocks: PeriodData[] = [
         id: 'p2',
         title: '20.01 — 04.02',
         subtitle: '16 дней · Янв–Фев 2026',
-        income: 1180000,
         startDate: '2026-01-20',
         endDate: '2026-02-04',
+        incomes: [
+            { id: 'i21', name: 'Контракт', amount: 900000 },
+            { id: 'i22', name: 'Партнёрка', amount: 280000 },
+        ],
         expenses: [
             {
                 id: 'e21',
@@ -109,9 +121,12 @@ const periodMocks: PeriodData[] = [
         id: 'p1',
         title: '05.01 — 20.01',
         subtitle: '16 дней · Январь 2026',
-        income: 980000,
         startDate: '2026-01-05',
         endDate: '2026-01-20',
+        incomes: [
+            { id: 'i11', name: 'Подписки', amount: 640000 },
+            { id: 'i12', name: 'Разовые', amount: 340000 },
+        ],
         expenses: [
             {
                 id: 'e11',
@@ -223,6 +238,101 @@ type OffIncomeBlockProps = {
     totalAmount: number;
     idPrefix: string;
 };
+
+type IncomeBlockProps = {
+    items: IncomeItem[];
+    setItems: Dispatch<SetStateAction<IncomeItem[]>>;
+    totalAmount: number;
+    idPrefix: string;
+};
+
+const IncomeBlock = ({
+    items,
+    setItems,
+    totalAmount,
+    idPrefix,
+}: IncomeBlockProps) => (
+    <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+        <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                Приход
+            </p>
+            <button
+                type="button"
+                onClick={() =>
+                    setItems((prev) => [
+                        ...prev,
+                        {
+                            id: `${idPrefix}${Date.now()}`,
+                            name: '',
+                            amount: 0,
+                        },
+                    ])
+                }
+                className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
+            >
+                + Строка
+            </button>
+        </div>
+        <div className="mt-3 hidden grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)] items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid">
+            <span>Название</span>
+            <span className="text-right">Сумма</span>
+        </div>
+        <div className="mt-3 grid gap-2">
+            {items.map((item, index) => (
+                <div
+                    key={item.id}
+                    className="grid items-center gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]"
+                >
+                    <input
+                        type="text"
+                        placeholder={`Приход ${index + 1}`}
+                        value={item.name}
+                        onChange={(event) =>
+                            setItems((prev) =>
+                                prev.map((income) =>
+                                    income.id === item.id
+                                        ? {
+                                              ...income,
+                                              name: event.target.value,
+                                          }
+                                        : income,
+                                ),
+                            )
+                        }
+                        className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                    />
+                    <input
+                        type="number"
+                        min={0}
+                        value={item.amount}
+                        onChange={(event) =>
+                            setItems((prev) =>
+                                prev.map((income) =>
+                                    income.id === item.id
+                                        ? {
+                                              ...income,
+                                              amount: Number(
+                                                  event.target.value,
+                                              ),
+                                          }
+                                        : income,
+                                ),
+                            )
+                        }
+                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
+                    />
+                </div>
+            ))}
+        </div>
+        <div className="mt-3 grid items-center gap-3 rounded-2xl border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]">
+            <span>Итого прихода</span>
+            <span className="text-right font-display text-sm tabular-nums">
+                {formatCurrency(totalAmount)}
+            </span>
+        </div>
+    </div>
+);
 
 const ExpensesBlock = ({
     title,
@@ -563,7 +673,7 @@ export default function Period() {
         [periodId],
     );
 
-    const [income, setIncome] = useState(period.income);
+    const [incomes, setIncomes] = useState(period.incomes);
     const [startDate, setStartDate] = useState(period.startDate);
     const [endDate, setEndDate] = useState(period.endDate);
     const [expenses, setExpenses] = useState(period.expenses);
@@ -583,6 +693,10 @@ export default function Period() {
     );
     const totalDifference = totalPlannedExpenses - totalActualExpenses;
     const totalOffIncome = offIncomeExpenses.reduce(
+        (sum, item) => sum + (item.amount || 0),
+        0,
+    );
+    const totalIncome = incomes.reduce(
         (sum, item) => sum + (item.amount || 0),
         0,
     );
@@ -608,7 +722,7 @@ export default function Period() {
         [days, startDate, endDate],
     );
     const dailyAverage =
-        days > 0 ? (income - totalActualExpenses) / days : 0;
+        days > 0 ? (totalIncome - totalActualExpenses) / days : 0;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -653,25 +767,12 @@ export default function Period() {
                     style={delay(120)}
                 >
                     <div className="order-2 grid gap-4 lg:order-none">
-                        <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-                            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                Приход
-                            </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-3">
-                                <input
-                                    type="number"
-                                    min={0}
-                                    value={income}
-                                    onChange={(event) =>
-                                        setIncome(Number(event.target.value))
-                                    }
-                                    className="no-spin w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-base font-semibold dark:border-white/10 dark:bg-white/10"
-                                />
-                                <span className="text-xs text-[#6a5d52] dark:text-white/60">
-                                    ₽
-                                </span>
-                            </div>
-                        </div>
+                        <IncomeBlock
+                            items={incomes}
+                            setItems={setIncomes}
+                            totalAmount={totalIncome}
+                            idPrefix="i"
+                        />
 
                         <ExpensesBlock
                             title="Обязательные траты"
@@ -774,7 +875,7 @@ export default function Period() {
                             <div className="mt-4 grid gap-2 text-xs text-white/70">
                                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                                     <span className="font-display tabular-nums text-[#7ce0b3]">
-                                        {formatCurrency(income)}
+                                        {formatCurrency(totalIncome)}
                                     </span>
                                     <span className="text-white/60">−</span>
                                     <span className="font-display tabular-nums text-[#ff8b7c]">
@@ -783,13 +884,14 @@ export default function Period() {
                                     <span className="text-white/60">=</span>
                                     <span
                                         className={`font-display tabular-nums ${
-                                            income - totalActualExpenses >= 0
+                                            totalIncome - totalActualExpenses >=
+                                            0
                                                 ? 'text-[#7ce0b3]'
                                                 : 'text-[#ff8b7c]'
                                         }`}
                                     >
                                         {formatSignedCurrency(
-                                            income - totalActualExpenses,
+                                            totalIncome - totalActualExpenses,
                                         )}
                                     </span>
                                 </div>

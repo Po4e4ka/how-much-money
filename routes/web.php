@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\PeriodController;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -25,5 +26,16 @@ Route::get('periods/{period}/daily', function (string $period) {
         'periodId' => $period,
     ]);
 })->middleware(['auth', 'verified'])->name('periods.daily');
+
+Route::middleware(['auth', 'verified'])
+    ->prefix('api')
+    ->group(function () {
+        Route::get('periods', [PeriodController::class, 'index'])
+            ->name('api.periods.index');
+        Route::post('periods', [PeriodController::class, 'store'])
+            ->name('api.periods.store');
+        Route::get('periods/{period}', [PeriodController::class, 'show'])
+            ->name('api.periods.show');
+    });
 
 require __DIR__.'/settings.php';
