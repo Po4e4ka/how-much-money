@@ -112,6 +112,11 @@ const toIntegerValue = (value: string) => {
     return Number(digits);
 };
 
+const getInvalidIncomeIds = (items: IncomeItem[]) =>
+    items
+        .filter((item) => item.name.trim() === '')
+        .map((item) => item.id);
+
 type ExpensesBlockProps = {
     title: string;
     items: ExpenseItem[];
@@ -146,6 +151,7 @@ type IncomeBlockProps = {
     totalAmount: number;
     onAdd: () => void;
     onBlurField: () => void;
+    invalidNameIds: string[];
 };
 
 const IncomeBlock = ({
@@ -154,6 +160,7 @@ const IncomeBlock = ({
     totalAmount,
     onAdd,
     onBlurField,
+    invalidNameIds,
 }: IncomeBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -195,7 +202,11 @@ const IncomeBlock = ({
                             )
                         }
                         onBlur={onBlurField}
-                        className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                        className={`rounded-2xl border bg-white/90 px-4 py-2 text-sm dark:bg-white/10 ${
+                            invalidNameIds.includes(item.id)
+                                ? 'border-[#b0352b] dark:border-[#ff8b7c]'
+                                : 'border-black/10 dark:border-white/10'
+                        }`}
                     />
                     <input
                         type="number"
@@ -695,8 +706,10 @@ export default function Period() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
+    const incomeNameError = 'Заполните названия прихода.';
 
     const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
     const hasFetchedRef = useRef(false);
@@ -883,6 +896,13 @@ export default function Period() {
     };
 
     const handleSave = async () => {
+        const nextInvalidIncomeIds = getInvalidIncomeIds(incomes);
+        if (nextInvalidIncomeIds.length > 0) {
+            setInvalidIncomeIds(nextInvalidIncomeIds);
+            setSaveError(incomeNameError);
+            return;
+        }
+
         if (isSaving) {
             pendingSaveRef.current = true;
             return;
@@ -993,6 +1013,14 @@ export default function Period() {
         }
     }, [saveTick]);
 
+    useEffect(() => {
+        const nextInvalidIncomeIds = getInvalidIncomeIds(incomes);
+        setInvalidIncomeIds(nextInvalidIncomeIds);
+        if (nextInvalidIncomeIds.length === 0 && saveError === incomeNameError) {
+            setSaveError(null);
+        }
+    }, [incomes, saveError]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={periodTitle} />
@@ -1044,6 +1072,7 @@ export default function Period() {
                             totalAmount={totalIncome}
                             onAdd={handleAddIncome}
                             onBlurField={handleSave}
+                            invalidNameIds={invalidIncomeIds}
                         />
 
                         <ExpensesBlock
