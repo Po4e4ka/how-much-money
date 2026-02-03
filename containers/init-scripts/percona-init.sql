@@ -1,2 +1,2 @@
-CREATE DATABASE IF NOT EXISTS `meme`;
-GRANT ALL ON `meme`.* TO 'alex'@'%';
+CREATE DATABASE IF NOT EXISTS `hmm`;
+GRANT ALL ON `hmm`.* TO 'alex'@'%';
