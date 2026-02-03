@@ -45,7 +45,7 @@ services:
       MYSQL_DATABASE: meme
       MYSQL_ROOT_PASSWORD: 1
     ports:
-      - '4206:3306'
+      - '4211:3306'
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
