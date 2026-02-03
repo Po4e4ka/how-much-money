@@ -27,7 +27,7 @@ Route::get('periods/{period}/daily', function (string $period) {
     ]);
 })->middleware(['auth', 'verified'])->name('periods.daily');
 
-Route::middleware(['auth', 'verified'])
+Route::middleware(['auth', 'verified', 'api'])
     ->prefix('api')
     ->group(function () {
         Route::get('periods', [PeriodController::class, 'index'])
@@ -36,6 +36,8 @@ Route::middleware(['auth', 'verified'])
             ->name('api.periods.store');
         Route::get('periods/{period}', [PeriodController::class, 'show'])
             ->name('api.periods.show');
+        Route::put('periods/{period}', [PeriodController::class, 'update'])
+            ->name('api.periods.update');
     });
 
 require __DIR__.'/settings.php';

@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import '../css/app.css';
 import { initializeTheme } from './hooks/use-appearance';
 
@@ -31,8 +32,6 @@ createInertiaApp({
 // This will set light / dark mode on load...
 initializeTheme();
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-}
+registerSW({
+    immediate: true,
+});

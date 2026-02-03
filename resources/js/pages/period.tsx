@@ -1,6 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import type { CSSProperties, Dispatch, SetStateAction } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -10,26 +10,24 @@ const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
 type ExpenseItem = {
     id: string;
     name: string;
-    plannedAmount: number;
-    actualAmount: number;
+    plannedAmount: number | '';
+    actualAmount: number | '';
 };
 
 type OffIncomeItem = {
     id: string;
     name: string;
-    amount: number;
+    amount: number | '';
 };
 
 type IncomeItem = {
     id: string;
     name: string;
-    amount: number;
+    amount: number | '';
 };
 
 type PeriodData = {
-    id: string;
-    title: string;
-    subtitle: string;
+    id: number;
     startDate: string;
     endDate: string;
     incomes: IncomeItem[];
@@ -38,125 +36,15 @@ type PeriodData = {
     dailyExpenses: Record<string, number>;
 };
 
-const periodMocks: PeriodData[] = [
-    {
-        id: 'p3',
-        title: '05.02 — 20.02',
-        subtitle: '16 дней · Февраль 2026',
-        startDate: '2026-02-05',
-        endDate: '2026-02-20',
-        incomes: [
-            { id: 'i31', name: 'Основной приход', amount: 1200000 },
-            { id: 'i32', name: 'Доп. услуги', amount: 220000 },
-        ],
-        expenses: [
-            {
-                id: 'e31',
-                name: 'Команда',
-                plannedAmount: 320000,
-                actualAmount: 310000,
-            },
-            {
-                id: 'e32',
-                name: 'Сервисы и софт',
-                plannedAmount: 60000,
-                actualAmount: 65000,
-            },
-        ],
-        offIncomeExpenses: [
-            {
-                id: 'o31',
-                name: 'Разовые покупки',
-                amount: 52000,
-            },
-        ],
-        dailyExpenses: {
-            '2026-02-05': 12000,
-            '2026-02-06': 18000,
-            '2026-02-07': 9000,
-            '2026-02-08': 15000,
-            '2026-02-10': 22000,
-        },
-    },
-    {
-        id: 'p2',
-        title: '20.01 — 04.02',
-        subtitle: '16 дней · Янв–Фев 2026',
-        startDate: '2026-01-20',
-        endDate: '2026-02-04',
-        incomes: [
-            { id: 'i21', name: 'Контракт', amount: 900000 },
-            { id: 'i22', name: 'Партнёрка', amount: 280000 },
-        ],
-        expenses: [
-            {
-                id: 'e21',
-                name: 'Аренда',
-                plannedAmount: 280000,
-                actualAmount: 280000,
-            },
-            {
-                id: 'e22',
-                name: 'Маркетинг',
-                plannedAmount: 140000,
-                actualAmount: 155000,
-            },
-        ],
-        offIncomeExpenses: [
-            {
-                id: 'o21',
-                name: 'Переезд',
-                amount: 78000,
-            },
-        ],
-        dailyExpenses: {
-            '2026-01-20': 14000,
-            '2026-01-21': 16000,
-            '2026-01-23': 12000,
-            '2026-01-27': 19000,
-            '2026-02-01': 13000,
-        },
-    },
-    {
-        id: 'p1',
-        title: '05.01 — 20.01',
-        subtitle: '16 дней · Январь 2026',
-        startDate: '2026-01-05',
-        endDate: '2026-01-20',
-        incomes: [
-            { id: 'i11', name: 'Подписки', amount: 640000 },
-            { id: 'i12', name: 'Разовые', amount: 340000 },
-        ],
-        expenses: [
-            {
-                id: 'e11',
-                name: 'Операционные',
-                plannedAmount: 220000,
-                actualAmount: 215000,
-            },
-            {
-                id: 'e12',
-                name: 'Подписки',
-                plannedAmount: 40000,
-                actualAmount: 38000,
-            },
-        ],
-        offIncomeExpenses: [
-            {
-                id: 'o11',
-                name: 'Форс-мажор',
-                amount: 12000,
-            },
-        ],
-        dailyExpenses: {
-            '2026-01-05': 9000,
-            '2026-01-06': 11000,
-            '2026-01-10': 7000,
-            '2026-01-15': 8000,
-            '2026-01-19': 12000,
-        },
-    },
-];
+const emptyPeriod: PeriodData = {
+    id: 0,
+    startDate: '',
+    endDate: '',
+    incomes: [],
+    expenses: [],
+    offIncomeExpenses: [],
+    dailyExpenses: {},
+};
 
 const formatCurrency = (value: number) =>
     `${Math.max(0, Math.round(value)).toLocaleString('ru-RU')} ₽`;
@@ -226,6 +114,7 @@ type ExpensesBlockProps = {
     totalActual: number;
     totalDifference: number;
     idPrefix: string;
+    onBlurField: () => void;
 };
 
 type OffIncomeBlockProps = {
@@ -237,20 +126,23 @@ type OffIncomeBlockProps = {
     totalLabel: string;
     totalAmount: number;
     idPrefix: string;
+    onBlurField: () => void;
 };
 
 type IncomeBlockProps = {
     items: IncomeItem[];
     setItems: Dispatch<SetStateAction<IncomeItem[]>>;
     totalAmount: number;
-    idPrefix: string;
+    onAdd: () => void;
+    onBlurField: () => void;
 };
 
 const IncomeBlock = ({
     items,
     setItems,
     totalAmount,
-    idPrefix,
+    onAdd,
+    onBlurField,
 }: IncomeBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -259,16 +151,7 @@ const IncomeBlock = ({
             </p>
             <button
                 type="button"
-                onClick={() =>
-                    setItems((prev) => [
-                        ...prev,
-                        {
-                            id: `${idPrefix}${Date.now()}`,
-                            name: '',
-                            amount: 0,
-                        },
-                    ])
-                }
+                onClick={onAdd}
                 className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
             >
                 + Строка
@@ -300,26 +183,52 @@ const IncomeBlock = ({
                                 ),
                             )
                         }
+                        onBlur={onBlurField}
                         className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
                     />
                     <input
                         type="number"
                         min={0}
                         value={item.amount}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                            const nextValue = event.target.value;
                             setItems((prev) =>
                                 prev.map((income) =>
                                     income.id === item.id
                                         ? {
                                               ...income,
-                                              amount: Number(
-                                                  event.target.value,
-                                              ),
+                                              amount:
+                                                  nextValue === ''
+                                                      ? ''
+                                                      : Number(nextValue),
                                           }
                                         : income,
                                 ),
-                            )
-                        }
+                            );
+                        }}
+                        onFocus={() => {
+                            if (item.amount === 0) {
+                                setItems((prev) =>
+                                    prev.map((income) =>
+                                        income.id === item.id
+                                            ? { ...income, amount: '' }
+                                            : income,
+                                    ),
+                                );
+                            }
+                        }}
+                        onBlur={() => {
+                            if (item.amount === '') {
+                                setItems((prev) =>
+                                    prev.map((income) =>
+                                        income.id === item.id
+                                            ? { ...income, amount: 0 }
+                                            : income,
+                                    ),
+                                );
+                            }
+                            onBlurField();
+                        }}
                         className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
                     />
                 </div>
@@ -345,6 +254,7 @@ const ExpensesBlock = ({
     totalActual,
     totalDifference,
     idPrefix,
+    onBlurField,
 }: ExpensesBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -355,15 +265,15 @@ const ExpensesBlock = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setItems((prev) => [
-                            ...prev,
-                            {
-                                id: `${idPrefix}${Date.now()}`,
-                                name: '',
-                                plannedAmount: 0,
-                                actualAmount: 0,
-                            },
-                        ])
+                            setItems((prev) => [
+                                ...prev,
+                                {
+                                    id: `${idPrefix}${Date.now()}`,
+                                    name: '',
+                                    plannedAmount: '',
+                                    actualAmount: '',
+                                },
+                            ])
                     }
                     className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
                 >
@@ -421,46 +331,97 @@ const ExpensesBlock = ({
                                 ),
                             )
                         }
+                        onBlur={onBlurField}
                         className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
                     />
                     <input
                         type="number"
                         min={0}
                         value={item.plannedAmount}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                            const nextValue = event.target.value;
                             setItems((prev) =>
                                 prev.map((expense) =>
                                     expense.id === item.id
                                         ? {
                                               ...expense,
-                                              plannedAmount: Number(
-                                                  event.target.value,
-                                              ),
+                                              plannedAmount:
+                                                  nextValue === ''
+                                                      ? ''
+                                                      : Number(nextValue),
                                           }
                                         : expense,
                                 ),
-                            )
-                        }
+                            );
+                        }}
+                        onFocus={() => {
+                            if (item.plannedAmount === 0) {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, plannedAmount: '' }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                        }}
+                        onBlur={() => {
+                            if (item.plannedAmount === '') {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, plannedAmount: 0 }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                            onBlurField();
+                        }}
                         className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
                     />
                     <input
                         type="number"
                         min={0}
                         value={item.actualAmount}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                            const nextValue = event.target.value;
                             setItems((prev) =>
                                 prev.map((expense) =>
                                     expense.id === item.id
                                         ? {
                                               ...expense,
-                                              actualAmount: Number(
-                                                  event.target.value,
-                                              ),
+                                              actualAmount:
+                                                  nextValue === ''
+                                                      ? ''
+                                                      : Number(nextValue),
                                           }
                                         : expense,
                                 ),
-                            )
-                        }
+                            );
+                        }}
+                        onFocus={() => {
+                            if (item.actualAmount === 0) {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, actualAmount: '' }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                        }}
+                        onBlur={() => {
+                            if (item.actualAmount === '') {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, actualAmount: 0 }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                            onBlurField();
+                        }}
                         className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
                     />
                     <div
@@ -536,6 +497,7 @@ const OffIncomeBlock = ({
     totalLabel,
     totalAmount,
     idPrefix,
+    onBlurField,
 }: OffIncomeBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -546,14 +508,14 @@ const OffIncomeBlock = ({
                 <button
                     type="button"
                     onClick={() =>
-                        setItems((prev) => [
-                            ...prev,
-                            {
-                                id: `${idPrefix}${Date.now()}`,
-                                name: '',
-                                amount: 0,
-                            },
-                        ])
+                            setItems((prev) => [
+                                ...prev,
+                                {
+                                    id: `${idPrefix}${Date.now()}`,
+                                    name: '',
+                                    amount: '',
+                                },
+                            ])
                     }
                     className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
                 >
@@ -609,24 +571,52 @@ const OffIncomeBlock = ({
                                 ),
                             )
                         }
+                        onBlur={onBlurField}
                         className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
                     />
                     <input
                         type="number"
                         min={0}
                         value={item.amount}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                            const nextValue = event.target.value;
                             setItems((prev) =>
                                 prev.map((expense) =>
                                     expense.id === item.id
                                         ? {
                                               ...expense,
-                                              amount: Number(event.target.value),
+                                              amount:
+                                                  nextValue === ''
+                                                      ? ''
+                                                      : Number(nextValue),
                                           }
                                         : expense,
                                 ),
-                            )
-                        }
+                            );
+                        }}
+                        onFocus={() => {
+                            if (item.amount === 0) {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, amount: '' }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                        }}
+                        onBlur={() => {
+                            if (item.amount === '') {
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? { ...expense, amount: 0 }
+                                            : expense,
+                                    ),
+                                );
+                            }
+                            onBlurField();
+                        }}
                         className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]"
                     />
                     {showDelete && (
@@ -668,59 +658,96 @@ const OffIncomeBlock = ({
 
 export default function Period() {
     const { periodId } = usePage<{ periodId: string }>().props;
-    const period = useMemo(
-        () => periodMocks.find((item) => item.id === periodId) ?? periodMocks[0],
-        [periodId],
-    );
-
-    const [incomes, setIncomes] = useState(period.incomes);
-    const [startDate, setStartDate] = useState(period.startDate);
-    const [endDate, setEndDate] = useState(period.endDate);
-    const [expenses, setExpenses] = useState(period.expenses);
-    const [offIncomeExpenses, setOffIncomeExpenses] = useState(
-        period.offIncomeExpenses,
-    );
+    const [period, setPeriod] = useState<PeriodData>(emptyPeriod);
+    const [incomes, setIncomes] = useState<IncomeItem[]>([]);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+    const [offIncomeExpenses, setOffIncomeExpenses] = useState<
+        OffIncomeItem[]
+    >([]);
+    const [dailyExpenses, setDailyExpenses] = useState<
+        Record<string, number>
+    >({});
     const [showDelete, setShowDelete] = useState(false);
     const [isEditingDates, setIsEditingDates] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+    const pendingSaveRef = useRef(false);
 
-    const totalPlannedExpenses = expenses.reduce(
-        (sum, item) => sum + (item.plannedAmount || 0),
+    const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
+    const hasFetchedRef = useRef(false);
+
+    const readCache = () => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+        const store = (window as typeof window & {
+            __periodCache?: Record<string, PeriodData>;
+        }).__periodCache;
+        return store?.[cacheKey] ?? null;
+    };
+
+    const writeCache = (data: PeriodData) => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const win = window as typeof window & {
+            __periodCache?: Record<string, PeriodData>;
+        };
+        if (!win.__periodCache) {
+            win.__periodCache = {};
+        }
+        win.__periodCache[cacheKey] = data;
+    };
+
+    const totalPlannedExpenses = (expenses ?? []).reduce(
+        (sum, item) => sum + (Number(item.plannedAmount) || 0),
         0,
     );
-    const totalActualExpenses = expenses.reduce(
-        (sum, item) => sum + (item.actualAmount || 0),
+    const totalActualExpenses = (expenses ?? []).reduce(
+        (sum, item) => sum + (Number(item.actualAmount) || 0),
         0,
     );
     const totalDifference = totalPlannedExpenses - totalActualExpenses;
-    const totalOffIncome = offIncomeExpenses.reduce(
-        (sum, item) => sum + (item.amount || 0),
+    const totalOffIncome = (offIncomeExpenses ?? []).reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
         0,
     );
-    const totalIncome = incomes.reduce(
-        (sum, item) => sum + (item.amount || 0),
+    const totalIncome = (incomes ?? []).reduce(
+        (sum, item) => sum + (Number(item.amount) || 0),
         0,
     );
-    const days = useMemo(
-        () => calculateDaysInclusive(startDate, endDate),
-        [startDate, endDate],
-    );
+    const days = useMemo(() => {
+        if (!startDate || !endDate) {
+            return 0;
+        }
+        return calculateDaysInclusive(startDate, endDate);
+    }, [startDate, endDate]);
     const totalDailyExpenses = useMemo(
         () =>
-            Object.values(period.dailyExpenses).reduce(
+            Object.values(dailyExpenses).reduce(
                 (sum, value) => sum + (value || 0),
                 0,
             ),
-        [period.dailyExpenses],
+        [dailyExpenses],
     );
     const dailyActualAverage = days > 0 ? totalDailyExpenses / days : 0;
-    const periodTitle = useMemo(
-        () => `${formatDateShort(startDate)} — ${formatDateShort(endDate)}`,
-        [startDate, endDate],
-    );
-    const periodSubtitle = useMemo(
-        () => `${days} дней · ${formatMonthRange(startDate, endDate)}`,
-        [days, startDate, endDate],
-    );
+    const periodTitle = useMemo(() => {
+        if (!startDate || !endDate) {
+            return 'Период';
+        }
+        return `${formatDateShort(startDate)} — ${formatDateShort(endDate)}`;
+    }, [startDate, endDate]);
+    const periodSubtitle = useMemo(() => {
+        if (!startDate || !endDate) {
+            return '';
+        }
+        return `${days} дней · ${formatMonthRange(startDate, endDate)}`;
+    }, [days, startDate, endDate]);
     const dailyAverage =
         days > 0 ? (totalIncome - totalActualExpenses) / days : 0;
 
@@ -730,14 +757,214 @@ export default function Period() {
             href: dashboard().url,
         },
         {
-            title: period.title,
-            href: `/periods/${period.id}`,
+            title: periodTitle,
+            href: `/periods/${periodId}`,
         },
     ];
 
+    const hasFullCache = (cached: PeriodData | null) =>
+        Boolean(
+            cached &&
+                cached.id &&
+                Array.isArray(cached.incomes) &&
+                Array.isArray(cached.expenses) &&
+                Array.isArray(cached.offIncomeExpenses),
+        );
+
+    const fetchPeriod = async () => {
+        if (hasFetchedRef.current) {
+            return;
+        }
+
+        const cached = readCache();
+        if (hasFullCache(cached)) {
+            hasFetchedRef.current = true;
+            setPeriod(cached);
+            setIncomes(cached.incomes ?? []);
+            setStartDate(cached.startDate ?? '');
+            setEndDate(cached.endDate ?? '');
+            setExpenses(cached.expenses ?? []);
+            setOffIncomeExpenses(cached.offIncomeExpenses ?? []);
+            setDailyExpenses(cached.dailyExpenses ?? {});
+            setIsLoading(false);
+            return;
+        }
+
+        hasFetchedRef.current = true;
+        setIsLoading(true);
+        setLoadError(null);
+        try {
+            const response = await fetch(`/api/periods/${periodId}`);
+            if (!response.ok) {
+                throw new Error('Не удалось загрузить период.');
+            }
+            const payload = (await response.json()) as {
+                data: {
+                    id: number;
+                    start_date: string;
+                    end_date: string;
+                    daily_expenses: Record<string, number>;
+                    incomes: { id: number; name: string; amount: number }[];
+                    expenses: {
+                        id: number;
+                        name: string;
+                        planned_amount: number;
+                        actual_amount: number;
+                    }[];
+                    external_expenses: {
+                        id: number;
+                        name: string;
+                        amount: number;
+                    }[];
+                };
+            };
+            const data = payload.data;
+            const normalized: PeriodData = {
+                id: data.id,
+                startDate: data.start_date,
+                endDate: data.end_date,
+                dailyExpenses: data.daily_expenses ?? {},
+                incomes: data.incomes.map((item) => ({
+                    id: String(item.id),
+                    name: item.name,
+                    amount: item.amount,
+                })),
+                expenses: data.expenses.map((item) => ({
+                    id: String(item.id),
+                    name: item.name,
+                    plannedAmount: item.planned_amount,
+                    actualAmount: item.actual_amount,
+                })),
+                offIncomeExpenses: data.external_expenses.map((item) => ({
+                    id: String(item.id),
+                    name: item.name,
+                    amount: item.amount,
+                })),
+            };
+
+            setPeriod(normalized);
+            setIncomes(normalized.incomes);
+            setStartDate(normalized.startDate);
+            setEndDate(normalized.endDate);
+            setExpenses(normalized.expenses);
+            setOffIncomeExpenses(normalized.offIncomeExpenses);
+            setDailyExpenses(normalized.dailyExpenses);
+            writeCache(normalized);
+        } catch (err) {
+            setLoadError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось загрузить период.',
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (isSaving) {
+            pendingSaveRef.current = true;
+            return;
+        }
+
+        setIsSaving(true);
+        setSaveError(null);
+        setSaveSuccess(false);
+        try {
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ?? '';
+            const response = await fetch(`/api/periods/${periodId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    start_date: startDate,
+                    end_date: endDate,
+                    daily_expenses: dailyExpenses,
+                    incomes: incomes.map((item) => ({
+                        id: Number.isFinite(Number(item.id))
+                            ? Number(item.id)
+                            : undefined,
+                        name: item.name,
+                        amount: Number(item.amount) || 0,
+                    })),
+                    expenses: expenses.map((item) => ({
+                        id: Number.isFinite(Number(item.id))
+                            ? Number(item.id)
+                            : undefined,
+                        name: item.name,
+                        planned_amount: Number(item.plannedAmount) || 0,
+                        actual_amount: Number(item.actualAmount) || 0,
+                    })),
+                    external_expenses: offIncomeExpenses.map((item) => ({
+                        id: Number.isFinite(Number(item.id))
+                            ? Number(item.id)
+                            : undefined,
+                        name: item.name,
+                        amount: Number(item.amount) || 0,
+                    })),
+                }),
+            });
+
+            if (response.status === 409) {
+                throw new Error('Период пересекается с существующим.');
+            }
+
+            if (!response.ok) {
+                throw new Error('Не удалось сохранить период.');
+            }
+
+            setSaveSuccess(true);
+            writeCache({
+                id: Number(periodId),
+                startDate,
+                endDate,
+                incomes,
+                expenses,
+                offIncomeExpenses,
+                dailyExpenses,
+            });
+        } catch (err) {
+            setSaveError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось сохранить период.',
+            );
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleAddIncome = () => {
+        setIncomes((prev) => [
+            ...prev,
+            {
+                id: `i${Date.now()}`,
+                name: '',
+                amount: '',
+            },
+        ]);
+        void handleSave();
+    };
+
+    useEffect(() => {
+        void fetchPeriod();
+    }, [periodId]);
+
+    useEffect(() => {
+        if (!isSaving && pendingSaveRef.current) {
+            pendingSaveRef.current = false;
+            void handleSave();
+        }
+    }, [isSaving]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={period.title} />
+            <Head title={periodTitle} />
             <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
                 <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
@@ -754,24 +981,38 @@ export default function Period() {
                             {periodSubtitle}
                         </p>
                     </div>
-                    <Link
-                        href={dashboard()}
-                        className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
-                    >
-                        ← Ко всем периодам
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href={dashboard()}
+                            prefetch
+                            className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                        >
+                            ← Ко всем периодам
+                        </Link>
+                    </div>
                 </section>
 
                 <section
                     className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] animate-reveal"
                     style={delay(120)}
                 >
+                    {isLoading && (
+                        <div className="col-span-full rounded-2xl border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
+                            Загружаем период...
+                        </div>
+                    )}
+                    {loadError && (
+                        <div className="col-span-full rounded-2xl border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
+                            {loadError}
+                        </div>
+                    )}
                     <div className="order-2 grid gap-4 lg:order-none">
                         <IncomeBlock
                             items={incomes}
                             setItems={setIncomes}
                             totalAmount={totalIncome}
-                            idPrefix="i"
+                            onAdd={handleAddIncome}
+                            onBlurField={handleSave}
                         />
 
                         <ExpensesBlock
@@ -785,6 +1026,7 @@ export default function Period() {
                             totalActual={totalActualExpenses}
                             totalDifference={totalDifference}
                             idPrefix="e"
+                            onBlurField={handleSave}
                         />
 
                         <OffIncomeBlock
@@ -796,6 +1038,7 @@ export default function Period() {
                             totalLabel="Итого сторонних"
                             totalAmount={totalOffIncome}
                             idPrefix="o"
+                            onBlurField={handleSave}
                         />
                     </div>
 
@@ -828,7 +1071,8 @@ export default function Period() {
                                 </span>
                             </div>
                             <Link
-                                href={`/periods/${period.id}/daily`}
+                                href={`/periods/${periodId}/daily`}
+                                prefetch
                                 className="mt-4 block w-full rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-center text-sm font-semibold text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.5)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
                             >
                                 Ежедневные траты
@@ -843,6 +1087,7 @@ export default function Period() {
                                             onChange={(event) =>
                                                 setStartDate(event.target.value)
                                             }
+                                            onBlur={handleSave}
                                             max={endDate}
                                             className="rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10"
                                         />
@@ -855,6 +1100,7 @@ export default function Period() {
                                             onChange={(event) =>
                                                 setEndDate(event.target.value)
                                             }
+                                            onBlur={handleSave}
                                             min={startDate}
                                             className="rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10"
                                         />
@@ -872,7 +1118,8 @@ export default function Period() {
                             <p className="mt-3 font-display text-2xl">
                                 {formatCurrency(dailyAverage)}
                             </p>
-                            <div className="mt-4 grid gap-2 text-xs text-white/70">
+                            <div className="mt-4 grid gap-3 text-xs text-white/70">
+                                <div className="h-px w-full bg-white/10" />
                                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                                     <span className="font-display tabular-nums text-[#7ce0b3]">
                                         {formatCurrency(totalIncome)}
@@ -898,16 +1145,34 @@ export default function Period() {
                                 <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">
                                     Приход − траты = сумма в период
                                 </div>
-                                <div className="mt-4 text-xs text-white/70">
-                                    Факт среднее в день:{' '}
-                                    <span className="font-display text-sm tabular-nums text-white">
-                                        {formatCurrency(dailyActualAverage)}
-                                    </span>
+                                <div className="h-px w-full bg-white/10" />
+                                <div className="mt-4 text-xs text-white/60">
+                                    Остаток
+                                </div>
+                                <div className="mt-2 font-display text-2xl">
+                                    {formatCurrency(
+                                        totalIncome -
+                                            totalActualExpenses -
+                                            totalDailyExpenses,
+                                    )}
+                                </div>
+                                <div className="h-px w-full bg-white/10" />
+                                <div className="mt-4 text-xs text-white/60">
+                                    Факт среднее в день
+                                </div>
+                                <div className="mt-2 font-display text-2xl">
+                                    {formatCurrency(dailyActualAverage)}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
+
+                {saveError && (
+                    <div className="relative z-10 rounded-2xl border border-black/10 bg-white/70 px-5 py-3 text-xs text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
+                        {saveError}
+                    </div>
+                )}
 
             </div>
         </AppLayout>

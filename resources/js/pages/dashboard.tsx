@@ -343,6 +343,7 @@ export default function Dashboard() {
                                     <Link
                                         key={period.id}
                                         href={`/periods/${period.id}`}
+                                        prefetch
                                         className="rounded-[28px] border border-black/10 bg-white/70 p-5 text-left shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10"
                                     >
                                         <div className="flex flex-wrap items-center justify-between gap-4">
