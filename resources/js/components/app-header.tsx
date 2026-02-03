@@ -44,6 +44,7 @@ import AppLogoIcon from './app-logo-icon';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
+    hideBreadcrumbsOnMobile?: boolean;
 };
 
 const mainNavItems: NavItem[] = [
@@ -70,7 +71,10 @@ const rightNavItems: NavItem[] = [
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-export function AppHeader({ breadcrumbs = [] }: Props) {
+export function AppHeader({
+    breadcrumbs = [],
+    hideBreadcrumbsOnMobile = false,
+}: Props) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
@@ -238,7 +242,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </div>
             </div>
             {breadcrumbs.length > 1 && (
-                <div className="flex w-full border-b border-sidebar-border/70">
+                <div
+                    className={`w-full border-b border-sidebar-border/70 ${
+                        hideBreadcrumbsOnMobile ? 'hidden sm:flex' : 'flex'
+                    }`}
+                >
                     <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>

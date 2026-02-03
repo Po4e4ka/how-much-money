@@ -323,7 +323,7 @@ export default function PeriodDaily() {
     }, [isSaving]);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} hideBreadcrumbsOnMobile>
             <Head title={`Ежедневные траты · ${periodTitle}`} />
             <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
@@ -364,7 +364,7 @@ export default function PeriodDaily() {
                             {loadError}
                         </div>
                     )}
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-sm:snap-y max-sm:snap-mandatory max-sm:overflow-y-auto max-sm:max-h-[calc(100vh-200px)] max-sm:pb-8 max-sm:pr-1">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-sm:snap-y max-sm:snap-mandatory max-sm:overflow-y-auto max-sm:max-h-[calc(100vh-190px)] max-sm:pb-8 max-sm:pr-1">
                         {weeklyBlocks.map((block, index) => {
                             const isLast = index === weeklyBlocks.length - 1;
                             const blockTotal = block.reduce(
@@ -386,7 +386,7 @@ export default function PeriodDaily() {
                             return (
                                 <div
                                     key={`${block[0]?.toISOString() ?? index}`}
-                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 max-sm:min-h-[calc(100vh-320px)] max-sm:snap-start max-sm:mb-2 max-sm:p-3 ${
+                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 max-sm:min-h-[calc(100vh-315px)] max-sm:snap-start max-sm:mb-2 max-sm:p-3 ${
                                         isLast ? 'max-sm:mb-24' : ''
                                     }`}
                                 >
@@ -398,61 +398,26 @@ export default function PeriodDaily() {
                                                     return (
                                                         <div
                                                             key={key}
-                                                            className="grid gap-2"
+                                                            className="grid gap-2 max-sm:flex max-sm:items-center max-sm:justify-between"
                                                         >
-                                                        <span className="text-xs text-[#6a5d52] dark:text-white/60">
-                                                            {formatDateLabel(
-                                                                date,
-                                                            )}
-                                                        </span>
-                                                        <input
-                                                            type="number"
-                                                            min={0}
-                                                            step={1}
-                                                            inputMode="numeric"
-                                                            value={
-                                                                dailyExpenses[
-                                                                    key
-                                                                ] ?? ''
-                                                            }
-                                                            onChange={(
-                                                                event,
-                                                            ) =>
-                                                                setDailyExpenses(
-                                                                    (prev) => {
-                                                                        const next =
-                                                                            {
-                                                                                ...prev,
-                                                                            };
-                                                                        if (
-                                                                            event
-                                                                                .target
-                                                                                .value ===
-                                                                            ''
-                                                                        ) {
-                                                                            delete next[
-                                                                                key
-                                                                            ];
-                                                                        } else {
-                                                                            next[
-                                                                                key
-                                                                            ] =
-                                                                                toIntegerValue(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ) || 0;
-                                                                        }
-                                                                        return next;
-                                                                    },
-                                                                )
-                                                            }
-                                                            onFocus={() => {
-                                                                if (
+                                                            <span className="text-xs text-[#6a5d52] dark:text-white/60">
+                                                                {formatDateLabel(
+                                                                    date,
+                                                                )}
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                step={1}
+                                                                inputMode="numeric"
+                                                                value={
                                                                     dailyExpenses[
                                                                         key
-                                                                    ] === 0
-                                                                ) {
+                                                                    ] ?? ''
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
                                                                     setDailyExpenses(
                                                                         (
                                                                             prev,
@@ -461,23 +426,61 @@ export default function PeriodDaily() {
                                                                                 {
                                                                                     ...prev,
                                                                                 };
-                                                                            delete next[
-                                                                                key
-                                                                            ];
+                                                                            if (
+                                                                                event
+                                                                                    .target
+                                                                                    .value ===
+                                                                                ''
+                                                                            ) {
+                                                                                delete next[
+                                                                                    key
+                                                                                ];
+                                                                            } else {
+                                                                                next[
+                                                                                    key
+                                                                                ] =
+                                                                                    toIntegerValue(
+                                                                                        event
+                                                                                            .target
+                                                                                            .value,
+                                                                                    ) ||
+                                                                                    0;
+                                                                            }
                                                                             return next;
                                                                         },
-                                                                    );
+                                                                    )
                                                                 }
-                                                            }}
-                                                            onBlur={handleSave}
-                                                            className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10 max-sm:px-2 max-sm:py-2 max-sm:text-xs"
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
+                                                                onFocus={() => {
+                                                                    if (
+                                                                        dailyExpenses[
+                                                                            key
+                                                                        ] === 0
+                                                                    ) {
+                                                                        setDailyExpenses(
+                                                                            (
+                                                                                prev,
+                                                                            ) => {
+                                                                                const next =
+                                                                                    {
+                                                                                        ...prev,
+                                                                                    };
+                                                                                delete next[
+                                                                                    key
+                                                                                ];
+                                                                                return next;
+                                                                            },
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                onBlur={handleSave}
+                                                                className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10 max-sm:w-[70%] max-sm:px-2 max-sm:py-2 max-sm:text-xs"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5 max-sm:px-2 max-sm:py-2">
+                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5 max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:items-center max-sm:gap-y-1 max-sm:px-2 max-sm:py-2">
                                             <span>Итого за неделю</span>
                                             <span className="font-display text-sm tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
                                                 {formatCurrency(blockTotal)}
