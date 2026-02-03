@@ -1,0 +1,63 @@
+services:
+  hmm-laravel:
+    container_name: hmm-laravel
+    build:
+      dockerfile: containers/Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+        USER_NAME: unit
+    volumes:
+      - ./:/var/www
+      - ./containers/configs/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+      - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
+    ports:
+      - '4210:80'
+    entrypoint: /docker-entrypoint.d/entrypoint.sh
+    command:
+      - "unitd"
+      - "--no-daemon"
+      - "--control"
+      - "unix:/var/run/control.unit.sock"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hmm.rule=Host(`hmm.devilops.tech`)"
+      - "traefik.http.routers.hmm.entrypoints=websecure"
+      - "traefik.http.routers.hmm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hmm.loadbalancer.server.port=80"
+    networks:
+      - infra_traefik_net
+      - hmm_net
+
+  hmm-db:
+    container_name: meme-db
+    build:
+      dockerfile: containers/percona.Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+    environment:
+      MYSQL_USER: alex
+      MYSQL_PASSWORD: 1
+      MYSQL_DATABASE: meme
+      MYSQL_ROOT_PASSWORD: 1
+    ports:
+      - '4206:3306'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./containers/init-scripts/percona-init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./var/data/percona:/var/lib/mysql
+      - ./var/logs/percona:/var/log/mysql
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - hmm_net
+
+networks:
+  infra_traefik_net:
+    external: true
+  hmm_net:
+    internal: true
