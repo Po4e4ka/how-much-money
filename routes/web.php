@@ -38,6 +38,8 @@ Route::middleware(['auth', 'verified', 'api'])
             ->name('api.periods.show');
         Route::put('periods/{period}', [PeriodController::class, 'update'])
             ->name('api.periods.update');
+        Route::delete('periods/{period}', [PeriodController::class, 'destroy'])
+            ->name('api.periods.destroy');
     });
 
 require __DIR__.'/settings.php';

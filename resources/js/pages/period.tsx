@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { TooltipInfo } from '@/components/tooltip-info';
 
 const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
 
@@ -531,9 +532,13 @@ const OffIncomeBlock = ({
 }: OffIncomeBlockProps) => (
     <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                {title}
-            </p>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                <span>{title}</span>
+                <TooltipInfo
+                    text="Эти траты не учитываются в расчётах."
+                    ariaLabel="Сторонние траты"
+                />
+            </div>
             <div className="flex items-center gap-2">
                 <button
                     type="button"
@@ -707,6 +712,7 @@ export default function Period() {
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
     const incomeNameError = 'Заполните названия прихода.';
@@ -996,6 +1002,41 @@ export default function Period() {
         setSaveTick((prev) => prev + 1);
     };
 
+    const handleDelete = async () => {
+        if (isDeleting) {
+            return;
+        }
+        if (!window.confirm('Удалить период?')) {
+            return;
+        }
+        setIsDeleting(true);
+        setSaveError(null);
+        try {
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ?? '';
+            const response = await fetch(`/api/periods/${periodId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                },
+            });
+            if (!response.ok) {
+                throw new Error('Не удалось удалить период.');
+            }
+            window.location.href = dashboard().url;
+        } catch (err) {
+            setSaveError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось удалить период.',
+            );
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     useEffect(() => {
         void fetchPeriod();
     }, [periodId]);
@@ -1041,6 +1082,14 @@ export default function Period() {
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="rounded-full border border-[#b0352b]/40 bg-white/80 px-4 py-2 text-xs text-[#b0352b] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 dark:border-[#ff8b7c]/40 dark:bg-white/10 dark:text-[#ff8b7c]"
+                        >
+                            Удалить
+                        </button>
                         <Link
                             href={dashboard()}
                             prefetch
@@ -1132,13 +1181,6 @@ export default function Period() {
                                     дней
                                 </span>
                             </div>
-                            <Link
-                                href={`/periods/${periodId}/daily`}
-                                prefetch
-                                className="mt-4 block w-full rounded-2xl border border-black/10 bg-white/80 px-4 py-3 text-center text-sm font-semibold text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.5)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
-                            >
-                                Ежедневные траты
-                            </Link>
                             {isEditingDates && (
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                     <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
@@ -1170,6 +1212,18 @@ export default function Period() {
                                 </div>
                             )}
                         </div>
+                        <Link
+                            href={`/periods/${periodId}/daily`}
+                            prefetch
+                            className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                        >
+                            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                Ежедневные траты
+                            </p>
+                            <p className="mt-2 text-sm text-[#6a5d52] dark:text-white/70">
+                                Перейти к дневным значениям
+                            </p>
+                        </Link>
                         <div className="rounded-2xl border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
                             <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
                                 Планируемое среднее в день
@@ -1211,7 +1265,13 @@ export default function Period() {
                                 </div>
                                 <div className="h-px w-full bg-black/10 dark:bg-white/10" />
                                 <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                    Фактический остаток
+                                    <span>Фактический остаток</span>
+                                    <span className="ml-2 inline-flex align-middle">
+                                        <TooltipInfo
+                                            text="Планируемый остаток +/− фактическая разница − ежедневные траты за период."
+                                            ariaLabel="Формула фактического остатка"
+                                        />
+                                    </span>
                                 </p>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
                                     <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
@@ -1253,7 +1313,7 @@ export default function Period() {
                                         )}
                                     </span>
                                 </div>
-                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
+                                <div clasтулsName="h-px w-full bg-black/10 dark:bg-white/10" />
                                 <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
                                     Фактическое среднее в день за период
                                 </p>

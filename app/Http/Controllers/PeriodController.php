@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Period;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class PeriodController extends Controller
@@ -229,6 +230,20 @@ class PeriodController extends Controller
                 ],
             );
         }
+
+        return response()->noContent();
+    }
+
+    public function destroy(Request $request, Period $period)
+    {
+        if ($period->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        DB::transaction(function () use ($period) {
+            $period->expenses()->detach();
+            $period->delete();
+        });
 
         return response()->noContent();
     }
