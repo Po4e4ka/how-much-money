@@ -9,11 +9,12 @@
     {
       "match": {
         "uri": [
-          "/build/sw.js"
+          "/build/sw.js",
+          "/build/manifest.webmanifest"
         ]
       },
       "action": {
-        "pass": "applications/hmm/index"
+        "share": "/var/www/public$uri"
       }
     },
     {

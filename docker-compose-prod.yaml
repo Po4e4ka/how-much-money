@@ -9,7 +9,6 @@ services:
         USER_NAME: unit
     volumes:
       - ./:/var/www
-      - ./containers/configs/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
       - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
     ports:
@@ -24,6 +23,7 @@ services:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=infra_traefik_net"
       - "traefik.http.routers.hmm.rule=Host(`hmm.devilops.tech`)"
       - "traefik.http.routers.hmm.entrypoints=websecure"
       - "traefik.http.routers.hmm.tls.certresolver=letsencrypt"

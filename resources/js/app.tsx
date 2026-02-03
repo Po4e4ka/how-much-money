@@ -34,4 +34,7 @@ initializeTheme();
 
 registerSW({
     immediate: true,
+    swUrl: '/build/sw.js',
+    scope: '/',
+    type: 'module',
 });
