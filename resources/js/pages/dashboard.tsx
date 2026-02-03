@@ -75,17 +75,15 @@ export default function Dashboard() {
                         <label className="flex flex-col gap-2 text-xs text-[#6a5d52] dark:text-white/70">
                             С
                             <input
-                                type="text"
-                                placeholder="05.02.2026"
-                                className="rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                type="date"
+                                className="date-input rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
                             />
                         </label>
                         <label className="flex flex-col gap-2 text-xs text-[#6a5d52] dark:text-white/70">
                             По
                             <input
-                                type="text"
-                                placeholder="20.02.2026"
-                                className="rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                type="date"
+                                className="date-input rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
                             />
                         </label>
                         <div className="flex flex-col justify-end">

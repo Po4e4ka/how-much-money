@@ -210,6 +210,21 @@
         margin: 0;
         -webkit-appearance: none;
     }
+
+    .date-input {
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .date-input::-webkit-calendar-picker-indicator {
+        opacity: 0.8;
+        filter: drop-shadow(0 8px 16px rgba(28, 26, 23, 0.2));
+        cursor: pointer;
+    }
+
+    .dark .date-input::-webkit-calendar-picker-indicator {
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) invert(1);
+    }
 }
 
 @keyframes reveal {

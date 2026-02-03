@@ -652,7 +652,7 @@ export default function Period() {
                     className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] animate-reveal"
                     style={delay(120)}
                 >
-                    <div className="grid gap-4">
+                    <div className="order-2 grid gap-4 lg:order-none">
                         <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                             <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
                                 Приход
@@ -698,7 +698,7 @@ export default function Period() {
                         />
                     </div>
 
-                    <div className="grid gap-4">
+                    <div className="order-1 grid gap-4 lg:order-none">
                         <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                             <div className="flex items-center justify-between">
                                 <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
