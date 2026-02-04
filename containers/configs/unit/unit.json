@@ -9,7 +9,19 @@
     {
       "match": {
         "uri": [
-          "/build/sw.js",
+          "/build/sw.js"
+        ]
+      },
+      "action": {
+        "share": "/var/www/public$uri",
+        "response_headers": {
+          "Service-Worker-Allowed": "/"
+        }
+      }
+    },
+    {
+      "match": {
+        "uri": [
           "/build/manifest.webmanifest"
         ]
       },
