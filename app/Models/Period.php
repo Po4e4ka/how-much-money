@@ -13,12 +13,14 @@ class Period extends Model
         'start_date',
         'end_date',
         'daily_expenses',
+        'is_pinned',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'daily_expenses' => 'array',
+        'is_pinned' => 'boolean',
     ];
 
     public function user(): BelongsTo

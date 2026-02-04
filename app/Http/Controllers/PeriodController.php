@@ -20,6 +20,7 @@ class PeriodController extends Controller
                 'user_id',
                 'start_date',
                 'end_date',
+                'is_pinned',
             ]);
 
         return response()->json([
@@ -80,6 +81,7 @@ class PeriodController extends Controller
                 'start_date' => $period->start_date->toDateString(),
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
+                'is_pinned' => (bool) $period->is_pinned,
                 'incomes' => $incomes,
                 'expenses' => $mandatoryExpenses,
                 'external_expenses' => $externalExpenses,
@@ -131,6 +133,7 @@ class PeriodController extends Controller
                 'start_date' => $period->start_date->toDateString(),
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
+                'is_pinned' => (bool) $period->is_pinned,
             ],
         ], 201);
     }
@@ -232,6 +235,65 @@ class PeriodController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    public function pin(Request $request, Period $period)
+    {
+        if ($period->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'pinned' => ['required', 'boolean'],
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        $force = (bool) ($data['force'] ?? false);
+        $pin = (bool) $data['pinned'];
+
+        if (! $pin) {
+            $period->is_pinned = false;
+            $period->save();
+
+            return response()->json([
+                'data' => [
+                    'is_pinned' => false,
+                ],
+            ]);
+        }
+
+        $existingPinned = Period::query()
+            ->where('user_id', $request->user()->id)
+            ->where('is_pinned', true)
+            ->where('id', '!=', $period->id)
+            ->first();
+
+        if ($existingPinned && ! $force) {
+            return response()->json([
+                'message' => 'Уже есть закрепленный период.',
+                'pinned' => [
+                    'id' => $existingPinned->id,
+                    'start_date' => $existingPinned->start_date->toDateString(),
+                    'end_date' => $existingPinned->end_date->toDateString(),
+                ],
+            ], 409);
+        }
+
+        DB::transaction(function () use ($request, $period) {
+            Period::query()
+                ->where('user_id', $request->user()->id)
+                ->where('is_pinned', true)
+                ->update(['is_pinned' => false]);
+
+            $period->is_pinned = true;
+            $period->save();
+        });
+
+        return response()->json([
+            'data' => [
+                'is_pinned' => true,
+            ],
+        ]);
     }
 
     public function destroy(Request $request, Period $period)

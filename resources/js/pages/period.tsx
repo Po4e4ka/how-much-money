@@ -5,7 +5,9 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { PillButton } from '@/components/pill-button';
+import { ConfirmPinModal } from '@/components/confirm-pin-modal';
 import { BlockTitle } from '@/components/block-title';
+import { BigDigit } from '@/components/big-digit';
 
 const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
 
@@ -37,6 +39,7 @@ type PeriodData = {
     expenses: ExpenseItem[];
     offIncomeExpenses: OffIncomeItem[];
     dailyExpenses: Record<string, number>;
+    isPinned: boolean;
 };
 
 const emptyPeriod: PeriodData = {
@@ -47,6 +50,7 @@ const emptyPeriod: PeriodData = {
     expenses: [],
     offIncomeExpenses: [],
     dailyExpenses: {},
+    isPinned: false,
 };
 
 const formatCurrency = (value: number) =>
@@ -155,6 +159,51 @@ type IncomeBlockProps = {
     onBlurField: () => void;
     invalidNameIds: string[];
 };
+
+type FormulaRowProps = {
+    children: React.ReactNode;
+    className?: string;
+};
+
+type FormulaValueProps = {
+    children: React.ReactNode;
+    className?: string;
+};
+
+type FormulaOpProps = {
+    children: React.ReactNode;
+    className?: string;
+};
+
+const FormulaRow = ({ children, className }: FormulaRowProps) => (
+    <div
+        className={`flex flex-wrap items-center gap-2 text-xs font-semibold sm:text-sm ${
+            className ?? ''
+        }`}
+    >
+        {children}
+    </div>
+);
+
+const FormulaValue = ({ children, className }: FormulaValueProps) => (
+    <span
+        className={`inline-flex items-center font-display tabular-nums leading-[0.9] ${
+            className ?? ''
+        }`}
+    >
+        {children}
+    </span>
+);
+
+const FormulaOp = ({ children, className }: FormulaOpProps) => (
+    <span
+        className={`inline-flex items-center leading-[0.9] relative -top-[1px] text-black/50 dark:text-white/60 ${
+            className ?? ''
+        }`}
+    >
+        {children}
+    </span>
+);
 
 const IncomeBlock = ({
     items,
@@ -703,12 +752,16 @@ export default function Period() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isPinning, setIsPinning] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [pinnedTitle, setPinnedTitle] = useState<string | undefined>();
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
     const incomeNameError = 'Заполните названия прихода.';
 
     const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
     const hasFetchedRef = useRef(false);
+    const fetchInFlightRef = useRef(false);
 
     const readCache = () => {
         if (typeof window === 'undefined') {
@@ -764,7 +817,9 @@ export default function Period() {
             ),
         [dailyExpenses],
     );
-    const dailyActualAverage = days > 0 ? totalDailyExpenses / days : 0;
+    const filledDays = Object.keys(dailyExpenses).length;
+    const dailyActualAverage =
+        filledDays > 0 ? totalDailyExpenses / filledDays : 0;
     const periodTitle = useMemo(() => {
         if (!startDate || !endDate) {
             return 'Период';
@@ -779,6 +834,11 @@ export default function Period() {
     }, [days, startDate, endDate]);
     const plannedPeriodSum = totalIncome - totalPlannedExpenses;
     const dailyAverage = days > 0 ? plannedPeriodSum / days : 0;
+    const actualRemaining =
+        plannedPeriodSum + totalDifference - totalDailyExpenses;
+    const remainingDays = Math.max(0, days - filledDays);
+    const remainingDailyAverage =
+        remainingDays > 0 ? actualRemaining / remainingDays : 0;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -801,13 +861,12 @@ export default function Period() {
         );
 
     const fetchPeriod = async () => {
-        if (hasFetchedRef.current) {
+        if (fetchInFlightRef.current) {
             return;
         }
 
         const cached = readCache();
         if (hasFullCache(cached)) {
-            hasFetchedRef.current = true;
             setPeriod(cached);
             setIncomes(cached.incomes ?? []);
             setStartDate(cached.startDate ?? '');
@@ -816,10 +875,16 @@ export default function Period() {
             setOffIncomeExpenses(cached.offIncomeExpenses ?? []);
             setDailyExpenses(cached.dailyExpenses ?? {});
             setIsLoading(false);
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                return;
+            }
+        }
+
+        if (hasFetchedRef.current && (!navigator.onLine || !cached)) {
             return;
         }
 
-        hasFetchedRef.current = true;
+        fetchInFlightRef.current = true;
         setIsLoading(true);
         setLoadError(null);
         try {
@@ -833,6 +898,7 @@ export default function Period() {
                     start_date: string;
                     end_date: string;
                     daily_expenses: Record<string, number>;
+                    is_pinned?: boolean;
                     incomes: { id: number; name: string; amount: number }[];
                     expenses: {
                         id: number;
@@ -853,6 +919,7 @@ export default function Period() {
                 startDate: data.start_date,
                 endDate: data.end_date,
                 dailyExpenses: data.daily_expenses ?? {},
+                isPinned: Boolean(data.is_pinned),
                 incomes: data.incomes.map((item) => ({
                     id: String(item.id),
                     name: item.name,
@@ -879,7 +946,10 @@ export default function Period() {
             setExpenses(normalized.expenses);
             setOffIncomeExpenses(normalized.offIncomeExpenses);
             setDailyExpenses(normalized.dailyExpenses);
+            setShowPinModal(false);
+            setPinnedTitle(undefined);
             writeCache(normalized);
+            hasFetchedRef.current = true;
         } catch (err) {
             setLoadError(
                 err instanceof Error
@@ -888,6 +958,7 @@ export default function Period() {
             );
         } finally {
             setIsLoading(false);
+            fetchInFlightRef.current = false;
         }
     };
 
@@ -1027,7 +1098,70 @@ export default function Period() {
         }
     };
 
+    const handleTogglePin = async (force = false) => {
+        if (isPinning) {
+            return;
+        }
+        setIsPinning(true);
+        try {
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ?? '';
+            const response = await fetch(`/api/periods/${periodId}/pin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    pinned: !period.isPinned,
+                    force,
+                }),
+            });
+
+            if (response.status === 409) {
+                const payload = (await response.json()) as {
+                    pinned?: { start_date: string; end_date: string };
+                };
+                if (payload.pinned) {
+                    setPinnedTitle(
+                        `${formatDateShort(payload.pinned.start_date)} — ${formatDateShort(
+                            payload.pinned.end_date,
+                        )}`,
+                    );
+                } else {
+                    setPinnedTitle(undefined);
+                }
+                setShowPinModal(true);
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Не удалось изменить закрепление периода.');
+            }
+
+            const payload = (await response.json()) as {
+                data?: { is_pinned: boolean };
+            };
+            const isPinned = payload.data?.is_pinned ?? !period.isPinned;
+            const updated = { ...period, isPinned };
+            setPeriod(updated);
+            writeCache(updated);
+            setShowPinModal(false);
+        } catch (err) {
+            setSaveError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось изменить закрепление периода.',
+            );
+        } finally {
+            setIsPinning(false);
+        }
+    };
+
     useEffect(() => {
+        hasFetchedRef.current = false;
         void fetchPeriod();
     }, [periodId]);
 
@@ -1072,14 +1206,24 @@ export default function Period() {
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
+                        <PillButton
+                            type="button"
+                            onClick={() => handleTogglePin(false)}
+                            tone={period.isPinned ? 'danger' : 'success'}
+                            disabled={isPinning}
+                            className="px-4 py-2"
+                        >
+                            {period.isPinned ? 'Открепить' : 'Закрепить'}
+                        </PillButton>
+                        <PillButton
                             type="button"
                             onClick={handleDelete}
                             disabled={isDeleting}
-                            className="rounded-full border border-[#b0352b]/40 bg-white/80 px-4 py-2 text-xs text-[#b0352b] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 dark:border-[#ff8b7c]/40 dark:bg-white/10 dark:text-[#ff8b7c]"
+                            tone="danger"
+                            className="px-4 py-2"
                         >
                             Удалить
-                        </button>
+                        </PillButton>
                         <Link
                             href={dashboard()}
                             prefetch
@@ -1214,95 +1358,115 @@ export default function Period() {
                             <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
                                 (Приход − обязательные) / дни
                             </p>
-                            <p className="mt-3 font-display text-2xl">
+                            <BigDigit className="mt-3">
                                 {formatCurrency(dailyAverage)}
-                            </p>
+                            </BigDigit>
 
                             <div className="mt-4 grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
                                 <div className="h-px w-full bg-black/10 dark:bg-white/10" />
                                 <BlockTitle>Планируемая сумма на период</BlockTitle>
-                                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                                    <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
+                                <FormulaRow>
+                                    <FormulaValue className="text-[#1e7b4f] dark:text-[#7ce0b3]">
                                         {formatCurrency(totalIncome)}
-                                    </span>
-                                    <span className="text-black/50 dark:text-white/60">−</span>
-                                    <span className="font-display tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                                    </FormulaValue>
+                                    <FormulaOp>−</FormulaOp>
+                                    <FormulaValue className="text-[#b0352b] dark:text-[#ff8b7c]">
                                         {formatCurrency(totalPlannedExpenses)}
-                                    </span>
-                                    <span className="text-black/50 dark:text-white/60">=</span>
-                                    <span
-                                        className={`font-display tabular-nums ${
+                                    </FormulaValue>
+                                    <FormulaOp>=</FormulaOp>
+                                    <FormulaValue
+                                        className={`${
                                             plannedPeriodSum >= 0
                                                 ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
                                                 : 'text-[#b0352b] dark:text-[#ff8b7c]'
                                         }`}
                                     >
                                         {formatSignedCurrency(plannedPeriodSum)}
-                                    </span>
-                                </div>
+                                    </FormulaValue>
+                                </FormulaRow>
 
                                 <div className="text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
                                     Приход − план = сумма в период
                                 </div>
-                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <BlockTitle
-                                    tooltipText="Планируемый остаток +/− фактическая разница − ежедневные траты за период."
-                                    tooltipAriaLabel="Формула фактического остатка"
-                                >
-                                    Фактический остаток
-                                </BlockTitle>
-                                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
-                                    <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
-                                        {formatCurrency(plannedPeriodSum)}
-                                    </span>
-                                    <span
-                                        className={`font-display tabular-nums ${
-                                            totalDifference > 0
-                                                ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
-                                                : totalDifference < 0
-                                                  ? 'text-[#b0352b] dark:text-[#ff8b7c]'
-                                                  : 'text-[#6a5d52] dark:text-white/70'
-                                        }`}
-                                    >
-                                        {formatSignedCurrency(totalDifference).replace(
-                                            /^([+−-])/, // add space after sign
-                                            '$1 ',
-                                        )}
-                                    </span>
-                                    <span className="text-black/50 dark:text-white/60">−</span>
-                                    <span className="font-display tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
-                                        {formatCurrency(totalDailyExpenses)}
-                                    </span>
-                                    <span className="text-black/50 dark:text-white/60">=</span>
-                                    <span
-                                        className={`font-display tabular-nums ${
-                                            plannedPeriodSum +
-                                                totalDifference -
-                                                totalDailyExpenses >=
-                                            0
-                                                ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
-                                                : 'text-[#b0352b] dark:text-[#ff8b7c]'
-                                        }`}
-                                    >
-                                        {formatSignedCurrency(
-                                            plannedPeriodSum +
-                                                totalDifference -
-                                                totalDailyExpenses,
-                                        )}
-                                    </span>
-                                </div>
-                                <div clasтулsName="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <BlockTitle>
-                                    Фактическое среднее в день за период
-                                </BlockTitle>
-                                <div className="mt-2 font-display text-2xl">
-                                    {formatCurrency(dailyActualAverage)}
-                                </div>
-
                             </div>
+                        </div>
+                        <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
+                            <BlockTitle tooltipText="Фактический остаток / количество незаполненных (непрошедших) дней">
+                                Расчётное в день на оставшиеся дни
+                            </BlockTitle>
+                            <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
+                                ({formatCurrency(actualRemaining)} / {remainingDays || 0} д.)
+                            </p>
+                            <BigDigit className="mt-3">
+                                {formatCurrency(remainingDailyAverage)}
+                            </BigDigit>
+                        </div>
+                        <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
+                            <BlockTitle
+                                tooltipText="Планируемый остаток +/− фактическая разница − ежедневные траты за период."
+                                tooltipAriaLabel="Формула фактического остатка"
+                            >
+                                Фактический остаток
+                            </BlockTitle>
+                            <FormulaRow className="mt-3">
+                                <FormulaValue className="text-[#1e7b4f] dark:text-[#7ce0b3]">
+                                    {formatCurrency(plannedPeriodSum)}
+                                </FormulaValue>
+                                <FormulaValue
+                                    className={`${
+                                        totalDifference > 0
+                                            ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                                            : totalDifference < 0
+                                              ? 'text-[#b0352b] dark:text-[#ff8b7c]'
+                                              : 'text-[#6a5d52] dark:text-white/70'
+                                    }`}
+                                >
+                                    {formatSignedCurrency(totalDifference).replace(
+                                        /^([+−-])/, // add space after sign
+                                        '$1 ',
+                                    )}
+                                </FormulaValue>
+                                <FormulaOp>−</FormulaOp>
+                                <FormulaValue className="text-[#b0352b] dark:text-[#ff8b7c]">
+                                    {formatCurrency(totalDailyExpenses)}
+                                </FormulaValue>
+                                <FormulaOp>=</FormulaOp>
+                                <FormulaValue
+                                    className={`${
+                                        plannedPeriodSum +
+                                            totalDifference -
+                                            totalDailyExpenses >=
+                                        0
+                                            ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                                            : 'text-[#b0352b] dark:text-[#ff8b7c]'
+                                    }`}
+                                >
+                                    {formatSignedCurrency(
+                                        plannedPeriodSum +
+                                            totalDifference -
+                                            totalDailyExpenses,
+                                    )}
+                                </FormulaValue>
+                            </FormulaRow>
+                            <div className="mt-4 h-px w-full bg-black/10 dark:bg-white/10" />
+                            <BlockTitle className="mt-4">
+                                Фактическое среднее в день за период
+                            </BlockTitle>
+                            <BigDigit className="mt-2">
+                                {formatCurrency(dailyActualAverage)}
+                            </BigDigit>
                         </div>
                     </div>
                 </section>
+
+                {showPinModal && (
+                    <ConfirmPinModal
+                        currentTitle={pinnedTitle}
+                        onCancel={() => setShowPinModal(false)}
+                        onConfirm={() => handleTogglePin(true)}
+                        confirmDisabled={isPinning}
+                    />
+                )}
 
                 {saveError && (
                     <div className="relative z-10 rounded-lg border border-black/10 bg-white/70 px-5 py-3 text-xs text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">

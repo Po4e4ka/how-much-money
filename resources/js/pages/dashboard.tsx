@@ -21,6 +21,7 @@ type PeriodItem = {
     id: number;
     start_date: string;
     end_date: string;
+    is_pinned?: boolean;
 };
 
 const normalizeDate = (value: string) => {
@@ -93,6 +94,27 @@ const calculateDaysInclusive = (start: string, end: string) => {
     return Math.max(1, diffDays + 1);
 };
 
+const buildPeriodMeta = (period: PeriodItem) => {
+    const hasValidDates =
+        isValidDate(period.start_date) && isValidDate(period.end_date);
+    const days = hasValidDates
+        ? calculateDaysInclusive(period.start_date, period.end_date)
+        : 0;
+    return {
+        title: hasValidDates
+            ? `${formatDateShort(period.start_date)} — ${formatDateShort(
+                  period.end_date,
+              )}`
+            : 'Период',
+        subtitle: hasValidDates
+            ? `${days} дней · ${formatMonthRange(
+                  period.start_date,
+                  period.end_date,
+              )}`
+            : 'Даты не заданы',
+    };
+};
+
 export default function Dashboard() {
     const { auth } = usePage<SharedData>().props;
     const [startDate, setStartDate] = useState('');
@@ -114,29 +136,22 @@ export default function Dashboard() {
         setShowUpdateInfo(auth.user?.is_info_shown === false);
     }, [auth.user]);
 
-    const handleInfoShown = async () => {
-        try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
+    const handleInfoShown = () => {
+        setShowUpdateInfo(false);
+        const token =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? '';
 
-            const response = await fetch('/api/user/info-shown', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Не удалось сохранить статус обновлений.');
-            }
-
-            setShowUpdateInfo(false);
-        } catch (err) {
+        void fetch('/api/user/info-shown', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+            },
+        }).catch((err) => {
             console.error(err);
-        }
+        });
     };
 
     const fetchPeriods = async () => {
@@ -293,7 +308,7 @@ export default function Dashboard() {
                                 onChange={(event) =>
                                     setStartDate(event.target.value)
                                 }
-                                className="date-input w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
                             />
                         </label>
                         <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
@@ -305,7 +320,7 @@ export default function Dashboard() {
                                     setEndDate(event.target.value)
                                 }
                                 min={startDate || undefined}
-                                className="date-input w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
                             />
                         </label>
                         <div className="flex flex-col justify-end">
@@ -330,6 +345,35 @@ export default function Dashboard() {
                     className="relative z-10 grid gap-4 animate-reveal"
                     style={delay(240)}
                 >
+                    {periods.some((period) => period.is_pinned) && (
+                        <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+                            <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                                Закреплённый период
+                            </p>
+                            <div className="mt-4">
+                                {(() => {
+                                    const pinned = periods.find(
+                                        (period) => period.is_pinned,
+                                    );
+                                    if (!pinned) {
+                                        return null;
+                                    }
+                                    const meta = buildPeriodMeta(pinned);
+                                    return (
+                                        <PeriodList
+                                            items={[
+                                                {
+                                                    id: pinned.id,
+                                                    title: meta.title,
+                                                    subtitle: meta.subtitle,
+                                                },
+                                            ]}
+                                        />
+                                    );
+                                })()}
+                            </div>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between">
                         <h2 className="font-display text-2xl">История периодов</h2>
                         <span className="text-xs text-[#6a5d52] dark:text-white/60">
@@ -355,30 +399,11 @@ export default function Dashboard() {
                         {!isLoading && !loadError && (
                             <PeriodList
                                 items={periods.map((period) => {
-                                    const hasValidDates =
-                                        isValidDate(period.start_date) &&
-                                        isValidDate(period.end_date);
-                                    const days = hasValidDates
-                                        ? calculateDaysInclusive(
-                                              period.start_date,
-                                              period.end_date,
-                                          )
-                                        : 0;
+                                    const meta = buildPeriodMeta(period);
                                     return {
                                         id: period.id,
-                                        title: hasValidDates
-                                            ? `${formatDateShort(
-                                                  period.start_date,
-                                              )} — ${formatDateShort(
-                                                  period.end_date,
-                                              )}`
-                                            : 'Период',
-                                        subtitle: hasValidDates
-                                            ? `${days} дней · ${formatMonthRange(
-                                                  period.start_date,
-                                                  period.end_date,
-                                              )}`
-                                            : 'Даты не заданы',
+                                        title: meta.title,
+                                        subtitle: meta.subtitle,
                                     };
                                 })}
                             />
