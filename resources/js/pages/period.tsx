@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { TooltipInfo } from '@/components/tooltip-info';
+import { PillButton } from '@/components/pill-button';
+import { BlockTitle } from '@/components/block-title';
 
 const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
 
@@ -163,20 +164,14 @@ const IncomeBlock = ({
     onBlurField,
     invalidNameIds,
 }: IncomeBlockProps) => (
-    <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+    <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                Приход
-            </p>
-            <button
-                type="button"
-                onClick={onAdd}
-                className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
-            >
+            <BlockTitle>Приход</BlockTitle>
+            <PillButton type="button" onClick={onAdd}>
                 + Строка
-            </button>
+            </PillButton>
         </div>
-        <div className="mt-3 hidden grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)] items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid">
+        <div className="mt-3 hidden grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)] items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid">
             <span>Название</span>
             <span className="text-right">Сумма</span>
         </div>
@@ -184,7 +179,7 @@ const IncomeBlock = ({
             {items.map((item, index) => (
                 <div
                     key={item.id}
-                    className="grid items-center gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]"
+                    className="grid items-center gap-2 grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]"
                 >
                     <input
                         type="text"
@@ -203,7 +198,7 @@ const IncomeBlock = ({
                             )
                         }
                         onBlur={onBlurField}
-                        className={`rounded-2xl border bg-white/90 px-4 py-2 text-sm dark:bg-white/10 ${
+                        className={`rounded-lg border bg-white/90 px-3 py-2 text-xs dark:bg-white/10 sm:px-4 sm:text-sm ${
                             invalidNameIds.includes(item.id)
                                 ? 'border-[#b0352b] dark:border-[#ff8b7c]'
                                 : 'border-black/10 dark:border-white/10'
@@ -252,12 +247,12 @@ const IncomeBlock = ({
                             }
                             onBlurField();
                         }}
-                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
+                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
                     />
                 </div>
             ))}
         </div>
-        <div className="mt-3 grid items-center gap-3 rounded-2xl border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]">
+        <div className="mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]">
             <span>Итого прихода</span>
             <span className="text-right font-display text-sm tabular-nums">
                 {formatCurrency(totalAmount)}
@@ -280,64 +275,64 @@ const ExpensesBlock = ({
     onBlurField,
     onAfterDelete,
 }: ExpensesBlockProps) => (
-    <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+    <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                {title}
-            </p>
+            <BlockTitle>{title}</BlockTitle>
             <div className="flex items-center gap-2">
-                <button
+                <PillButton
                     type="button"
                     onClick={() =>
-                            setItems((prev) => [
-                                ...prev,
-                                {
-                                    id: `${idPrefix}${Date.now()}`,
-                                    name: '',
-                                    plannedAmount: '',
-                                    actualAmount: '',
-                                    actualTouched: false,
-                                },
-                            ])
+                        setItems((prev) => [
+                            ...prev,
+                            {
+                                id: `${idPrefix}${Date.now()}`,
+                                name: '',
+                                plannedAmount: '',
+                                actualAmount: '',
+                                actualTouched: false,
+                            },
+                        ])
                     }
-                    className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
                 >
                     + Строка
-                </button>
-                <button
+                </PillButton>
+                <PillButton
                     type="button"
                     onClick={onToggleDelete}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                        showDelete
-                            ? 'border-[#b0352b]/40 text-[#b0352b] dark:border-[#ff8b7c]/40 dark:text-[#ff8b7c]'
-                            : 'border-black/10 text-[#6a5d52] dark:border-white/10 dark:text-white/70'
-                    }`}
+                    active={showDelete}
+                    activeTone="danger"
                 >
                     − Удаление
-                </button>
+                </PillButton>
             </div>
         </div>
         <div
-            className={`mt-3 hidden items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid ${
+            className={`mt-3 grid items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 ${
                 showDelete
-                    ? 'grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                    : 'grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
+                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
             }`}
         >
-            <span>Название</span>
+            <span>
+                <span className="sm:hidden">Название</span>
+                <span className="hidden sm:inline">Название</span>
+            </span>
             <span className="text-right">План</span>
             <span className="text-right">Факт</span>
-            <span className="text-right">Разница</span>
+            <span className="text-right">
+                <span className="sm:hidden">Разн</span>
+                <span className="hidden sm:inline">Разница</span>
+            </span>
             {showDelete && <span className="text-center">—</span>}
         </div>
         <div className="mt-3 grid gap-2">
             {items.map((item, index) => (
                 <div
                     key={item.id}
-                    className={`grid items-center gap-3 ${
+                    className={`grid items-center gap-2 ${
                         showDelete
-                            ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                            : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
+                            ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                            : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
                     }`}
                 >
                     <input
@@ -357,7 +352,7 @@ const ExpensesBlock = ({
                             )
                         }
                         onBlur={onBlurField}
-                        className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
                     />
                     <input
                         type="number"
@@ -405,7 +400,7 @@ const ExpensesBlock = ({
                             }
                             onBlurField();
                         }}
-                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
+                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
                     />
                     <input
                         type="number"
@@ -451,10 +446,10 @@ const ExpensesBlock = ({
                             }
                             onBlurField();
                         }}
-                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10"
+                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
                     />
                     <div
-                        className={`flex min-h-[40px] items-center justify-end px-4 py-2 text-sm tabular-nums ${
+                        className={`flex min-h-[36px] items-center justify-end px-0 py-2 text-xs tabular-nums sm:min-h-[40px] sm:px-4 sm:text-sm ${
                             item.plannedAmount - item.actualAmount > 0
                                 ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
                                 : item.plannedAmount - item.actualAmount < 0
@@ -489,10 +484,10 @@ const ExpensesBlock = ({
             ))}
         </div>
         <div
-            className={`mt-3 grid items-center gap-3 rounded-2xl border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
+            className={`mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
                 showDelete
-                    ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                    : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
+                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
             }`}
         >
             <span>{totalLabel}</span>
@@ -530,50 +525,45 @@ const OffIncomeBlock = ({
     onBlurField,
     onAfterDelete,
 }: OffIncomeBlockProps) => (
-    <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+    <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                <span>{title}</span>
-                <TooltipInfo
-                    text="Эти траты не учитываются в расчётах."
-                    ariaLabel="Сторонние траты"
-                />
-            </div>
+            <BlockTitle
+                tooltipText="Эти траты не учитываются в расчётах."
+                tooltipAriaLabel="Сторонние траты"
+            >
+                {title}
+            </BlockTitle>
             <div className="flex items-center gap-2">
-                <button
+                <PillButton
                     type="button"
                     onClick={() =>
-                            setItems((prev) => [
-                                ...prev,
-                                {
-                                    id: `${idPrefix}${Date.now()}`,
-                                    name: '',
-                                    amount: '',
-                                },
-                            ])
+                        setItems((prev) => [
+                            ...prev,
+                            {
+                                id: `${idPrefix}${Date.now()}`,
+                                name: '',
+                                amount: '',
+                            },
+                        ])
                     }
-                    className="rounded-full border border-black/10 px-3 py-1 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
                 >
                     + Строка
-                </button>
-                <button
+                </PillButton>
+                <PillButton
                     type="button"
                     onClick={onToggleDelete}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                        showDelete
-                            ? 'border-[#b0352b]/40 text-[#b0352b] dark:border-[#ff8b7c]/40 dark:text-[#ff8b7c]'
-                            : 'border-black/10 text-[#6a5d52] dark:border-white/10 dark:text-white/70'
-                    }`}
+                    active={showDelete}
+                    activeTone="danger"
                 >
                     − Удаление
-                </button>
+                </PillButton>
             </div>
         </div>
         <div
-            className={`mt-3 hidden items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid ${
+            className={`mt-3 hidden items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid ${
                 showDelete
-                    ? 'grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_auto]'
-                    : 'grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]'
+                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
+                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
             }`}
         >
             <span>Название</span>
@@ -584,10 +574,10 @@ const OffIncomeBlock = ({
             {items.map((item, index) => (
                 <div
                     key={item.id}
-                    className={`grid items-center gap-3 ${
+                    className={`grid items-center gap-2 ${
                         showDelete
-                            ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_auto]'
-                            : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]'
+                            ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
+                            : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
                     }`}
                 >
                     <input
@@ -607,7 +597,7 @@ const OffIncomeBlock = ({
                             )
                         }
                         onBlur={onBlurField}
-                        className="rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
                     />
                     <input
                         type="number"
@@ -651,7 +641,7 @@ const OffIncomeBlock = ({
                             }
                             onBlurField();
                         }}
-                        className="no-spin rounded-2xl border border-black/10 bg-white/90 px-4 py-2 text-sm text-right tabular-nums text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]"
+                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c] sm:px-4 sm:text-sm"
                     />
                     {showDelete && (
                         <button
@@ -676,10 +666,10 @@ const OffIncomeBlock = ({
             ))}
         </div>
         <div
-            className={`mt-3 grid items-center gap-3 rounded-2xl border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
+            className={`mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
                 showDelete
-                    ? 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)_auto]'
-                    : 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.7fr)]'
+                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
+                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
             }`}
         >
             <span>{totalLabel}</span>
@@ -1065,7 +1055,7 @@ export default function Period() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={periodTitle} />
-            <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
+            <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
                 <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
 
@@ -1105,12 +1095,12 @@ export default function Period() {
                     style={delay(120)}
                 >
                     {isLoading && (
-                        <div className="col-span-full rounded-2xl border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
+                        <div className="col-span-full rounded-lg border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
                             Загружаем период...
                         </div>
                     )}
                     {loadError && (
-                        <div className="col-span-full rounded-2xl border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
+                        <div className="col-span-full rounded-lg border border-black/10 bg-white/70 px-5 py-4 text-sm text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
                             {loadError}
                         </div>
                     )}
@@ -1154,24 +1144,19 @@ export default function Period() {
                     </div>
 
                     <div className="order-1 grid gap-4 lg:order-none">
-                        <div className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+                        <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                    Дни периода
-                                </p>
-                                <button
+                                <BlockTitle>Дни периода</BlockTitle>
+                                <PillButton
                                     type="button"
                                     onClick={() =>
                                         setIsEditingDates((prev) => !prev)
                                     }
-                                    className={`rounded-full border px-3 py-1 text-xs transition ${
-                                        isEditingDates
-                                            ? 'border-[#1e7b4f]/40 text-[#1e7b4f] dark:border-[#7ce0b3]/40 dark:text-[#7ce0b3]'
-                                            : 'border-black/10 text-[#6a5d52] dark:border-white/10 dark:text-white/70'
-                                    }`}
+                                    active={isEditingDates}
+                                    activeTone="success"
                                 >
                                     {isEditingDates ? 'Готово' : 'Редактировать'}
-                                </button>
+                                </PillButton>
                             </div>
                             <div className="mt-3 flex items-center gap-3">
                                 <div className="px-1 text-base font-semibold tabular-nums">
@@ -1182,7 +1167,7 @@ export default function Period() {
                                 </span>
                             </div>
                             {isEditingDates && (
-                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                <div className="mt-3 grid gap-2 grid-cols-2">
                                     <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
                                         Начало
                                         <input
@@ -1193,7 +1178,7 @@ export default function Period() {
                                             }
                                             onBlur={handleSave}
                                             max={endDate}
-                                            className="rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                                            className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
                                         />
                                     </label>
                                     <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
@@ -1206,7 +1191,7 @@ export default function Period() {
                                             }
                                             onBlur={handleSave}
                                             min={startDate}
-                                            className="rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/10"
+                                            className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
                                         />
                                     </label>
                                 </div>
@@ -1215,19 +1200,17 @@ export default function Period() {
                         <Link
                             href={`/periods/${periodId}/daily`}
                             prefetch
-                            className="rounded-2xl border border-black/10 bg-white/80 px-5 py-4 text-sm text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                            className="group rounded-lg border border-[#1e7b4f]/30 bg-white/90 px-5 py-4 text-sm text-[#1c1a17] shadow-[0_24px_48px_-28px_rgba(30,123,79,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-30px_rgba(30,123,79,0.65)] dark:border-[#7ce0b3]/30 dark:bg-white/10 dark:text-white"
                         >
-                            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                Ежедневные траты
-                            </p>
-                            <p className="mt-2 text-sm text-[#6a5d52] dark:text-white/70">
-                                Перейти к дневным значениям
-                            </p>
+                            <div className="flex items-start justify-between gap-4">
+                                <BlockTitle>Ежедневные траты</BlockTitle>
+                                <PillButton as="span">
+                                    Перейти к дневным значениям
+                                </PillButton>
+                            </div>
                         </Link>
-                        <div className="rounded-2xl border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
-                            <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                Планируемое среднее в день
-                            </p>
+                        <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
+                            <BlockTitle>Планируемое среднее в день</BlockTitle>
                             <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
                                 (Приход − обязательные) / дни
                             </p>
@@ -1237,9 +1220,7 @@ export default function Period() {
 
                             <div className="mt-4 grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
                                 <div className="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                    Планируемая сумма на период
-                                </p>
+                                <BlockTitle>Планируемая сумма на период</BlockTitle>
                                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                                     <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
                                         {formatCurrency(totalIncome)}
@@ -1264,15 +1245,12 @@ export default function Period() {
                                     Приход − план = сумма в период
                                 </div>
                                 <div className="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
-                                    <span>Фактический остаток</span>
-                                    <span className="ml-2 inline-flex align-middle">
-                                        <TooltipInfo
-                                            text="Планируемый остаток +/− фактическая разница − ежедневные траты за период."
-                                            ariaLabel="Формула фактического остатка"
-                                        />
-                                    </span>
-                                </p>
+                                <BlockTitle
+                                    tooltipText="Планируемый остаток +/− фактическая разница − ежедневные траты за период."
+                                    tooltipAriaLabel="Формула фактического остатка"
+                                >
+                                    Фактический остаток
+                                </BlockTitle>
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
                                     <span className="font-display tabular-nums text-[#1e7b4f] dark:text-[#7ce0b3]">
                                         {formatCurrency(plannedPeriodSum)}
@@ -1314,9 +1292,9 @@ export default function Period() {
                                     </span>
                                 </div>
                                 <div clasтулsName="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <p className="text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60">
+                                <BlockTitle>
                                     Фактическое среднее в день за период
-                                </p>
+                                </BlockTitle>
                                 <div className="mt-2 font-display text-2xl">
                                     {formatCurrency(dailyActualAverage)}
                                 </div>
@@ -1327,7 +1305,7 @@ export default function Period() {
                 </section>
 
                 {saveError && (
-                    <div className="relative z-10 rounded-2xl border border-black/10 bg-white/70 px-5 py-3 text-xs text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
+                    <div className="relative z-10 rounded-lg border border-black/10 bg-white/70 px-5 py-3 text-xs text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c]">
                         {saveError}
                     </div>
                 )}

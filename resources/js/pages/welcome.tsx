@@ -1,5 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { CSSProperties } from 'react';
+import { useEffect } from 'react';
 import { dashboard, login, register } from '@/routes';
 import type { SharedData } from '@/types';
 
@@ -11,6 +12,11 @@ export default function Welcome({
     canRegister?: boolean;
 }) {
     const { auth } = usePage<SharedData>().props;
+    useEffect(() => {
+        if (auth.user) {
+            router.visit(dashboard(), { replace: true });
+        }
+    }, [auth.user]);
 
     const primaryHref = auth.user
         ? dashboard()

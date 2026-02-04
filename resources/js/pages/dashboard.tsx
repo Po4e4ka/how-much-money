@@ -1,9 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, SharedData } from '@/types';
+import { OverlapPeriodModal } from '@/components/overlap-period-modal';
+import { PeriodList } from '@/components/period-list';
+import { UpdateInfoModal } from '@/components/update-info-modal';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -57,11 +60,11 @@ const formatDateShort = (value: string) => {
     return `${day}.${month}`;
 };
 
-const formatMonthYear = (value: string) =>
-    new Intl.DateTimeFormat('ru-RU', {
-        month: 'long',
-        year: 'numeric',
-    }).format(parseDate(value));
+    const formatMonthYear = (value: string) =>
+        new Intl.DateTimeFormat('ru-RU', {
+            month: 'long',
+            year: 'numeric',
+        }).format(parseDate(value));
 
 const formatMonthRange = (start: string, end: string) => {
     const formatter = new Intl.DateTimeFormat('ru-RU', {
@@ -91,6 +94,7 @@ const calculateDaysInclusive = (start: string, end: string) => {
 };
 
 export default function Dashboard() {
+    const { auth } = usePage<SharedData>().props;
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -102,6 +106,38 @@ export default function Dashboard() {
     const [periods, setPeriods] = useState<PeriodItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [showUpdateInfo, setShowUpdateInfo] = useState(
+        auth.user?.is_info_shown === false,
+    );
+
+    useEffect(() => {
+        setShowUpdateInfo(auth.user?.is_info_shown === false);
+    }, [auth.user]);
+
+    const handleInfoShown = async () => {
+        try {
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ?? '';
+
+            const response = await fetch('/api/user/info-shown', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Не удалось сохранить статус обновлений.');
+            }
+
+            setShowUpdateInfo(false);
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     const fetchPeriods = async () => {
         setIsLoading(true);
@@ -248,20 +284,20 @@ export default function Dashboard() {
                             </h2>
                         </div>
                     </div>
-                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                        <label className="flex flex-col gap-2 text-xs text-[#6a5d52] dark:text-white/70">
-                            С
+                    <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_1fr]">
+                        <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                            <span>С</span>
                             <input
                                 type="date"
                                 value={startDate}
                                 onChange={(event) =>
                                     setStartDate(event.target.value)
                                 }
-                                className="date-input rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                className="date-input w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
                             />
                         </label>
-                        <label className="flex flex-col gap-2 text-xs text-[#6a5d52] dark:text-white/70">
-                            По
+                        <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                            <span>По</span>
                             <input
                                 type="date"
                                 value={endDate}
@@ -269,7 +305,7 @@ export default function Dashboard() {
                                     setEndDate(event.target.value)
                                 }
                                 min={startDate || undefined}
-                                className="date-input rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                                className="date-input w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white"
                             />
                         </label>
                         <div className="flex flex-col justify-end">
@@ -316,127 +352,75 @@ export default function Dashboard() {
                                 Периодов пока нет. Создайте первый диапазон выше.
                             </div>
                         )}
-                        {!isLoading &&
-                            !loadError &&
-                            periods.map((period) => {
-                                const hasValidDates =
-                                    isValidDate(period.start_date) &&
-                                    isValidDate(period.end_date);
-                                const days = hasValidDates
-                                    ? calculateDaysInclusive(
-                                          period.start_date,
-                                          period.end_date,
-                                      )
-                                    : 0;
-                                const title = hasValidDates
-                                    ? `${formatDateShort(
-                                          period.start_date,
-                                      )} — ${formatDateShort(period.end_date)}`
-                                    : 'Период';
-                                const subtitle = hasValidDates
-                                    ? `${days} дней · ${formatMonthRange(
-                                          period.start_date,
-                                          period.end_date,
-                                      )}`
-                                    : 'Даты не заданы';
-                                return (
-                                    <Link
-                                        key={period.id}
-                                        href={`/periods/${period.id}`}
-                                        prefetch
-                                        className="rounded-[28px] border border-black/10 bg-white/70 p-5 text-left shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10"
-                                    >
-                                        <div className="flex flex-wrap items-center justify-between gap-4">
-                                            <div>
-                                                <h3 className="font-display text-xl">
-                                                    {title}
-                                                </h3>
-                                                <p className="mt-1 text-xs text-[#6a5d52] dark:text-white/70">
-                                                    {subtitle}
-                                                </p>
-                                            </div>
-                                            <span className="rounded-full border border-black/10 bg-white/80 px-3 py-1 text-xs text-[#1c1a17] dark:border-white/10 dark:bg-white/10 dark:text-white">
-                                                Открыть период
-                                            </span>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
+                        {!isLoading && !loadError && (
+                            <PeriodList
+                                items={periods.map((period) => {
+                                    const hasValidDates =
+                                        isValidDate(period.start_date) &&
+                                        isValidDate(period.end_date);
+                                    const days = hasValidDates
+                                        ? calculateDaysInclusive(
+                                              period.start_date,
+                                              period.end_date,
+                                          )
+                                        : 0;
+                                    return {
+                                        id: period.id,
+                                        title: hasValidDates
+                                            ? `${formatDateShort(
+                                                  period.start_date,
+                                              )} — ${formatDateShort(
+                                                  period.end_date,
+                                              )}`
+                                            : 'Период',
+                                        subtitle: hasValidDates
+                                            ? `${days} дней · ${formatMonthRange(
+                                                  period.start_date,
+                                                  period.end_date,
+                                              )}`
+                                            : 'Даты не заданы',
+                                    };
+                                })}
+                            />
+                        )}
                     </div>
                 </section>
 
                 {overlapPeriod && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-                        <div className="w-full max-w-xl rounded-3xl border border-black/10 bg-white/95 p-6 text-[#1c1a17] shadow-[0_24px_60px_-28px_rgba(0,0,0,0.7)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white">
-                            <h3 className="font-display text-2xl">
-                                Эти даты присутствуют в периоде
-                            </h3>
-                            <div className="mt-4">
-                                <Link
-                                    href={`/periods/${overlapPeriod.id}`}
-                                    className="block w-full rounded-[28px] border border-black/10 bg-white/70 p-5 text-left shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-4">
-                                        <div>
-                                            <h3 className="font-display text-xl">
-                                                {isValidDate(
-                                                    overlapPeriod.start_date,
-                                                ) &&
-                                                isValidDate(
-                                                    overlapPeriod.end_date,
-                                                )
-                                                    ? `${formatDateShort(
-                                                          overlapPeriod.start_date,
-                                                      )} — ${formatDateShort(
-                                                          overlapPeriod.end_date,
-                                                      )}`
-                                                    : 'Период'}
-                                            </h3>
-                                            <p className="mt-1 text-xs text-[#6a5d52] dark:text-white/70">
-                                                {isValidDate(
-                                                    overlapPeriod.start_date,
-                                                ) &&
-                                                isValidDate(
-                                                    overlapPeriod.end_date,
-                                                )
-                                                    ? `${calculateDaysInclusive(
-                                                          overlapPeriod.start_date,
-                                                          overlapPeriod.end_date,
-                                                      )} дней · ${formatMonthRange(
-                                                          overlapPeriod.start_date,
-                                                          overlapPeriod.end_date,
-                                                      )}`
-                                                    : 'Даты не заданы'}
-                                            </p>
-                                        </div>
-                                        <span className="rounded-full border border-black/10 bg-white/80 px-3 py-1 text-xs text-[#1c1a17] dark:border-white/10 dark:bg-white/10 dark:text-white">
-                                            Открыть период
-                                        </span>
-                                    </div>
-                                </Link>
-                            </div>
-                            <div className="mt-6 flex flex-wrap justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setOverlapPeriod(null);
-                                        setPendingForce(false);
-                                    }}
-                                    className="rounded-full border border-black/10 px-4 py-2 text-xs text-[#6a5d52] dark:border-white/10 dark:text-white/70"
-                                >
-                                    Отменить
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleCreatePeriod(true)}
-                                    className="rounded-full bg-[#d87a4a] px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_28px_-18px_rgba(216,122,74,0.8)]"
-                                    disabled={!pendingForce || isSaving}
-                                >
-                                    Подтвердить
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <OverlapPeriodModal
+                        href={`/periods/${overlapPeriod.id}`}
+                        title={
+                            isValidDate(overlapPeriod.start_date) &&
+                            isValidDate(overlapPeriod.end_date)
+                                ? `${formatDateShort(
+                                      overlapPeriod.start_date,
+                                  )} — ${formatDateShort(
+                                      overlapPeriod.end_date,
+                                  )}`
+                                : 'Период'
+                        }
+                        subtitle={
+                            isValidDate(overlapPeriod.start_date) &&
+                            isValidDate(overlapPeriod.end_date)
+                                ? `${calculateDaysInclusive(
+                                      overlapPeriod.start_date,
+                                      overlapPeriod.end_date,
+                                  )} дней · ${formatMonthRange(
+                                      overlapPeriod.start_date,
+                                      overlapPeriod.end_date,
+                                  )}`
+                                : 'Даты не заданы'
+                        }
+                        onClose={() => {
+                            setOverlapPeriod(null);
+                            setPendingForce(false);
+                        }}
+                        onConfirm={() => handleCreatePeriod(true)}
+                        confirmDisabled={!pendingForce || isSaving}
+                    />
+                )}
+                {showUpdateInfo && (
+                    <UpdateInfoModal onConfirm={handleInfoShown} />
                 )}
             </div>
         </AppLayout>
