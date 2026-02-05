@@ -4,6 +4,8 @@ type PeriodListItem = {
     id: number;
     title: string;
     subtitle: string;
+    isClosed?: boolean;
+    actualRemaining?: number | null;
 };
 
 type PeriodListProps = {
@@ -18,6 +20,8 @@ export const PeriodList = ({ items }: PeriodListProps) => (
                 href={`/periods/${period.id}`}
                 title={period.title}
                 subtitle={period.subtitle}
+                isClosed={period.isClosed}
+                actualRemaining={period.actualRemaining}
             />
         ))}
     </div>

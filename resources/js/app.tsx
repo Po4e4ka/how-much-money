@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import '../css/app.css';
 import { initializeTheme } from './hooks/use-appearance';
+import { initPwaInstallListener } from './hooks/use-pwa-install';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -31,6 +32,7 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+initPwaInstallListener();
 
 registerSW({
     immediate: true,

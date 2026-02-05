@@ -39,6 +39,8 @@ Route::middleware(['auth', 'verified', 'api'])
             ->name('api.periods.show');
         Route::post('periods/{period}/pin', [PeriodController::class, 'pin'])
             ->name('api.periods.pin');
+        Route::post('periods/{period}/close', [PeriodController::class, 'close'])
+            ->name('api.periods.close');
         Route::put('periods/{period}', [PeriodController::class, 'update'])
             ->name('api.periods.update');
         Route::delete('periods/{period}', [PeriodController::class, 'destroy'])

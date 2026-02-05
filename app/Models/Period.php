@@ -14,6 +14,7 @@ class Period extends Model
         'end_date',
         'daily_expenses',
         'is_pinned',
+        'is_closed',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class Period extends Model
         'end_date' => 'date',
         'daily_expenses' => 'array',
         'is_pinned' => 'boolean',
+        'is_closed' => 'boolean',
     ];
 
     public function user(): BelongsTo

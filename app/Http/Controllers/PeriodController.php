@@ -15,16 +15,41 @@ class PeriodController extends Controller
         $periods = Period::query()
             ->where('user_id', $request->user()->id)
             ->orderByDesc('start_date')
+            ->with([
+                'expenses' => function ($query) {
+                    $query->select('expenses.id', 'expenses.type')
+                        ->withPivot(['planned_amount', 'actual_amount']);
+                },
+            ])
             ->get([
                 'id',
                 'user_id',
                 'start_date',
                 'end_date',
+                'daily_expenses',
                 'is_pinned',
+                'is_closed',
             ]);
 
+        $data = $periods->map(function (Period $period) {
+            $payload = [
+                'id' => $period->id,
+                'user_id' => $period->user_id,
+                'start_date' => $period->start_date?->toDateString(),
+                'end_date' => $period->end_date?->toDateString(),
+                'is_pinned' => (bool) $period->is_pinned,
+                'is_closed' => (bool) $period->is_closed,
+            ];
+
+            if ($period->is_closed) {
+                $payload['actual_remaining'] = $this->calculateActualRemaining($period);
+            }
+
+            return $payload;
+        });
+
         return response()->json([
-            'data' => $periods,
+            'data' => $data,
         ]);
     }
 
@@ -82,6 +107,7 @@ class PeriodController extends Controller
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
                 'is_pinned' => (bool) $period->is_pinned,
+                'is_closed' => (bool) $period->is_closed,
                 'incomes' => $incomes,
                 'expenses' => $mandatoryExpenses,
                 'external_expenses' => $externalExpenses,
@@ -99,9 +125,18 @@ class PeriodController extends Controller
         ]);
 
         $force = (bool)($data['force'] ?? false);
-        $startDate = Carbon::parse($data['start_date'])->toDateString();
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate = Carbon::parse($data['end_date']);
+
+        if ($endDate->gt($startDate->copy()->addMonthsNoOverflow(3))) {
+            return response()->json([
+                'message' => 'Диапазон не должен превышать 3 месяца.',
+            ], 422);
+        }
+
+        $startDate = $startDate->toDateString();
         $maxDate = Carbon::parse($data['start_date'])->addDay()->toDateString();
-        $endDate = Carbon::parse($data['end_date'])->toDateString();
+        $endDate = $endDate->toDateString();
         $overlap = Period::query()
             ->where('user_id', $request->user()->id)
             ->where('start_date', '<', $endDate)
@@ -134,6 +169,7 @@ class PeriodController extends Controller
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
                 'is_pinned' => (bool) $period->is_pinned,
+                'is_closed' => (bool) $period->is_closed,
             ],
         ], 201);
     }
@@ -144,10 +180,17 @@ class PeriodController extends Controller
             abort(403);
         }
 
+        if ($period->is_closed) {
+            return response()->json([
+                'message' => 'Период закрыт и больше не редактируется.',
+            ], 423);
+        }
+
         $data = $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'daily_expenses' => ['nullable', 'array'],
+            'force' => ['nullable', 'boolean'],
             'incomes' => ['nullable', 'array'],
             'incomes.*.id' => ['nullable', 'integer'],
             'incomes.*.name' => ['required_with:incomes', 'string', 'max:255'],
@@ -163,11 +206,22 @@ class PeriodController extends Controller
             'external_expenses.*.amount' => ['required_with:external_expenses', 'integer', 'min:0'],
         ]);
 
+        $force = (bool)($data['force'] ?? false);
+
         if (isset($data['start_date']) && isset($data['end_date'])) {
 
-            $startDate = Carbon::parse($data['start_date'])->toDateString();
+            $startDate = Carbon::parse($data['start_date']);
+            $endDate = Carbon::parse($data['end_date']);
+
+            if ($endDate->gt($startDate->copy()->addMonthsNoOverflow(3))) {
+                return response()->json([
+                    'message' => 'Диапазон не должен превышать 3 месяца.',
+                ], 422);
+            }
+
+            $startDate = $startDate->toDateString();
             $maxDate = Carbon::parse($data['start_date'])->addDay()->toDateString();
-            $endDate = Carbon::parse($data['end_date'])->toDateString();
+            $endDate = $endDate->toDateString();
 
             $overlap = Period::query()
                 ->where('user_id', $request->user()->id)
@@ -177,7 +231,7 @@ class PeriodController extends Controller
                 ->orderBy('start_date')
                 ->first();
 
-            if ($overlap) {
+            if ($overlap && ! $force) {
                 return response()->json([
                     'message' => 'Период пересекается с существующим.',
                     'overlap' => [
@@ -235,6 +289,38 @@ class PeriodController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    public function close(Request $request, Period $period)
+    {
+        if ($period->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        if ($period->is_closed) {
+            return response()->json([
+                'data' => [
+                    'is_closed' => true,
+                    'actual_remaining' => $this->calculateActualRemaining($period),
+                ],
+            ]);
+        }
+
+        if (! $this->hasAllDailyExpenses($period)) {
+            return response()->json([
+                'message' => 'Заполните ежедневные траты за все дни периода.',
+            ], 422);
+        }
+
+        $period->is_closed = true;
+        $period->save();
+
+        return response()->json([
+            'data' => [
+                'is_closed' => true,
+                'actual_remaining' => $this->calculateActualRemaining($period),
+            ],
+        ]);
     }
 
     public function pin(Request $request, Period $period)
@@ -350,5 +436,52 @@ class PeriodController extends Controller
                 $expenseId => $pivot,
             ]);
         }
+    }
+
+    private function hasAllDailyExpenses(Period $period): bool
+    {
+        $dailyExpenses = $period->daily_expenses ?? [];
+        $startDate = $period->start_date?->copy();
+        $endDate = $period->end_date?->copy();
+
+        if (! $startDate || ! $endDate) {
+            return false;
+        }
+
+        if ($startDate->gt($endDate)) {
+            return false;
+        }
+
+        $days = $startDate->diffInDays($endDate);
+        for ($i = 0; $i <= $days; $i++) {
+            $key = $startDate->copy()->addDays($i)->toDateString();
+            if (! array_key_exists($key, $dailyExpenses)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function calculateActualRemaining(Period $period): int
+    {
+        $period->loadMissing([
+            'expenses' => function ($query) {
+                $query->select('expenses.id', 'expenses.type')
+                    ->withPivot(['actual_amount']);
+            },
+        ]);
+
+        $dailyTotal = array_sum($period->daily_expenses ?? []);
+
+        $incomeTotal = $period->expenses
+            ->where('type', 'income')
+            ->sum(fn ($expense) => (int) $expense->pivot->actual_amount);
+
+        $mandatoryActual = $period->expenses
+            ->where('type', 'mandatory')
+            ->sum(fn ($expense) => (int) $expense->pivot->actual_amount);
+
+        return (int) ($incomeTotal - $mandatoryActual - $dailyTotal);
     }
 }

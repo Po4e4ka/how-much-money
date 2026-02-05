@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { Download, LogOut, Settings } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
@@ -18,10 +19,16 @@ type Props = {
 
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
+    const { canInstall, promptInstall } = usePwaInstall();
 
     const handleLogout = () => {
         cleanup();
         router.flushAll();
+    };
+
+    const handleInstall = async () => {
+        cleanup();
+        await promptInstall();
     };
 
     return (
@@ -44,6 +51,12 @@ export function UserMenuContent({ user }: Props) {
                         Settings
                     </Link>
                 </DropdownMenuItem>
+                {canInstall && (
+                    <DropdownMenuItem onClick={handleInstall}>
+                        <Download className="mr-2" />
+                        Install app
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

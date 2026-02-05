@@ -12,6 +12,7 @@ type PeriodData = {
     startDate: string;
     endDate: string;
     dailyExpenses: Record<string, number>;
+    isClosed: boolean;
 };
 
 const emptyPeriod: PeriodData = {
@@ -19,6 +20,7 @@ const emptyPeriod: PeriodData = {
     startDate: '',
     endDate: '',
     dailyExpenses: {},
+    isClosed: false,
 };
 
 const formatCurrency = (value: number) =>
@@ -217,7 +219,10 @@ export default function PeriodDaily() {
         const cached = readCache();
         if (cached && cached.id) {
             hasFetchedRef.current = true;
-            setPeriod(cached);
+            setPeriod({
+                ...cached,
+                isClosed: Boolean(cached.isClosed),
+            });
             setDailyExpenses(cached.dailyExpenses ?? {});
             setIsLoading(false);
             return;
@@ -237,6 +242,7 @@ export default function PeriodDaily() {
                     start_date: string;
                     end_date: string;
                     daily_expenses: Record<string, number>;
+                    is_closed?: boolean;
                 };
             };
             const data = payload.data;
@@ -245,6 +251,7 @@ export default function PeriodDaily() {
                 startDate: data.start_date,
                 endDate: data.end_date,
                 dailyExpenses: data.daily_expenses ?? {},
+                isClosed: Boolean(data.is_closed),
             });
             setDailyExpenses(data.daily_expenses ?? {});
             writeCache({
@@ -252,6 +259,7 @@ export default function PeriodDaily() {
                 startDate: data.start_date,
                 endDate: data.end_date,
                 dailyExpenses: data.daily_expenses ?? {},
+                isClosed: Boolean(data.is_closed),
             });
         } catch (err) {
             setLoadError(
@@ -265,6 +273,9 @@ export default function PeriodDaily() {
     };
 
     const handleSave = async () => {
+        if (period.isClosed) {
+            return;
+        }
         if (isSaving) {
             pendingSaveRef.current = true;
             return;
@@ -290,6 +301,14 @@ export default function PeriodDaily() {
             });
 
             if (!response.ok) {
+                if (response.status === 423) {
+                    const payload = (await response.json()) as {
+                        message?: string;
+                    };
+                    throw new Error(
+                        payload.message ?? 'Период закрыт и не редактируется.',
+                    );
+                }
                 throw new Error('Не удалось сохранить ежедневные траты.');
             }
 
@@ -299,6 +318,7 @@ export default function PeriodDaily() {
                 startDate: period.startDate,
                 endDate: period.endDate,
                 dailyExpenses,
+                isClosed: period.isClosed,
             });
         } catch (err) {
             setSaveError(
@@ -414,6 +434,9 @@ export default function PeriodDaily() {
                                                                     dailyExpenses[
                                                                         key
                                                                     ] ?? ''
+                                                                }
+                                                                disabled={
+                                                                    period.isClosed
                                                                 }
                                                                 onChange={(
                                                                     event,

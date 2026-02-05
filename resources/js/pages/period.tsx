@@ -6,6 +6,8 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import { PillButton } from '@/components/pill-button';
 import { ConfirmPinModal } from '@/components/confirm-pin-modal';
+import { ConfirmClosePeriodModal } from '@/components/confirm-close-period-modal';
+import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { BlockTitle } from '@/components/block-title';
 import { BigDigit } from '@/components/big-digit';
 
@@ -40,6 +42,7 @@ type PeriodData = {
     offIncomeExpenses: OffIncomeItem[];
     dailyExpenses: Record<string, number>;
     isPinned: boolean;
+    isClosed: boolean;
 };
 
 const emptyPeriod: PeriodData = {
@@ -51,6 +54,7 @@ const emptyPeriod: PeriodData = {
     offIncomeExpenses: [],
     dailyExpenses: {},
     isPinned: false,
+    isClosed: false,
 };
 
 const formatCurrency = (value: number) =>
@@ -83,6 +87,24 @@ const formatMonthYear = (value: string) =>
         year: 'numeric',
     }).format(parseDate(value));
 
+const addMonthsClamp = (value: string, months: number) => {
+    if (!value) {
+        return '';
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return '';
+    }
+    const targetMonth = month - 1 + months;
+    const targetYear = year + Math.floor(targetMonth / 12);
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+    const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+    const nextDay = Math.min(day, lastDay);
+    const nextMonth = String(normalizedMonth + 1).padStart(2, '0');
+    const nextDate = String(nextDay).padStart(2, '0');
+    return `${targetYear}-${nextMonth}-${nextDate}`;
+};
+
 const formatMonthRange = (start: string, end: string) => {
     const formatter = new Intl.DateTimeFormat('ru-RU', {
         month: 'short',
@@ -108,6 +130,13 @@ const calculateDaysInclusive = (start: string, end: string) => {
     const diffMs = endDate.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     return Math.max(1, diffDays + 1);
+};
+
+const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 const toIntegerValue = (value: string) => {
@@ -136,6 +165,7 @@ type ExpensesBlockProps = {
     idPrefix: string;
     onBlurField: () => void;
     onAfterDelete: () => void;
+    readOnly?: boolean;
 };
 
 type OffIncomeBlockProps = {
@@ -149,6 +179,7 @@ type OffIncomeBlockProps = {
     idPrefix: string;
     onBlurField: () => void;
     onAfterDelete: () => void;
+    readOnly?: boolean;
 };
 
 type IncomeBlockProps = {
@@ -158,6 +189,7 @@ type IncomeBlockProps = {
     onAdd: () => void;
     onBlurField: () => void;
     invalidNameIds: string[];
+    readOnly?: boolean;
 };
 
 type FormulaRowProps = {
@@ -212,11 +244,12 @@ const IncomeBlock = ({
     onAdd,
     onBlurField,
     invalidNameIds,
+    readOnly = false,
 }: IncomeBlockProps) => (
     <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
             <BlockTitle>Приход</BlockTitle>
-            <PillButton type="button" onClick={onAdd}>
+            <PillButton type="button" onClick={onAdd} disabled={readOnly}>
                 + Строка
             </PillButton>
         </div>
@@ -234,6 +267,7 @@ const IncomeBlock = ({
                         type="text"
                         placeholder={`Приход ${index + 1}`}
                         value={item.name}
+                        disabled={readOnly}
                         onChange={(event) =>
                             setItems((prev) =>
                                 prev.map((income) =>
@@ -259,6 +293,7 @@ const IncomeBlock = ({
                         step={1}
                         inputMode="numeric"
                         value={item.amount}
+                        disabled={readOnly}
                         onChange={(event) => {
                             const nextValue = event.target.value;
                             setItems((prev) =>
@@ -323,6 +358,7 @@ const ExpensesBlock = ({
     idPrefix,
     onBlurField,
     onAfterDelete,
+    readOnly = false,
 }: ExpensesBlockProps) => (
     <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -342,6 +378,7 @@ const ExpensesBlock = ({
                             },
                         ])
                     }
+                    disabled={readOnly}
                 >
                     + Строка
                 </PillButton>
@@ -350,6 +387,7 @@ const ExpensesBlock = ({
                     onClick={onToggleDelete}
                     active={showDelete}
                     activeTone="danger"
+                    disabled={readOnly}
                 >
                     − Удаление
                 </PillButton>
@@ -388,6 +426,7 @@ const ExpensesBlock = ({
                         type="text"
                         placeholder={`Трата ${index + 1}`}
                         value={item.name}
+                        disabled={readOnly}
                         onChange={(event) =>
                             setItems((prev) =>
                                 prev.map((expense) =>
@@ -409,6 +448,7 @@ const ExpensesBlock = ({
                         step={1}
                         inputMode="numeric"
                         value={item.plannedAmount}
+                        disabled={readOnly}
                         onChange={(event) => {
                             const nextValue = event.target.value;
                             setItems((prev) =>
@@ -457,6 +497,7 @@ const ExpensesBlock = ({
                         step={1}
                         inputMode="numeric"
                         value={item.actualAmount}
+                        disabled={readOnly}
                         onChange={(event) => {
                             const nextValue = event.target.value;
                             setItems((prev) =>
@@ -525,6 +566,7 @@ const ExpensesBlock = ({
                             }}
                             aria-label={`Удалить трату ${index + 1}`}
                             className="flex h-8 w-8 items-center justify-center rounded-full text-xs text-[#b0352b] transition hover:bg-[#b0352b]/10 dark:text-[#ff8b7c] dark:hover:bg-[#ff8b7c]/15"
+                            disabled={readOnly}
                         >
                             —
                         </button>
@@ -573,6 +615,7 @@ const OffIncomeBlock = ({
     idPrefix,
     onBlurField,
     onAfterDelete,
+    readOnly = false,
 }: OffIncomeBlockProps) => (
     <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
         <div className="flex items-center justify-between">
@@ -595,6 +638,7 @@ const OffIncomeBlock = ({
                             },
                         ])
                     }
+                    disabled={readOnly}
                 >
                     + Строка
                 </PillButton>
@@ -603,6 +647,7 @@ const OffIncomeBlock = ({
                     onClick={onToggleDelete}
                     active={showDelete}
                     activeTone="danger"
+                    disabled={readOnly}
                 >
                     − Удаление
                 </PillButton>
@@ -633,6 +678,7 @@ const OffIncomeBlock = ({
                         type="text"
                         placeholder={`Трата ${index + 1}`}
                         value={item.name}
+                        disabled={readOnly}
                         onChange={(event) =>
                             setItems((prev) =>
                                 prev.map((expense) =>
@@ -654,6 +700,7 @@ const OffIncomeBlock = ({
                         step={1}
                         inputMode="numeric"
                         value={item.amount}
+                        disabled={readOnly}
                         onChange={(event) => {
                             const nextValue = event.target.value;
                             setItems((prev) =>
@@ -707,6 +754,7 @@ const OffIncomeBlock = ({
                             }}
                             aria-label={`Удалить трату ${index + 1}`}
                             className="flex h-8 w-8 items-center justify-center rounded-full text-xs text-[#b0352b] transition hover:bg-[#b0352b]/10 dark:text-[#ff8b7c] dark:hover:bg-[#ff8b7c]/15"
+                            disabled={readOnly}
                         >
                             —
                         </button>
@@ -748,12 +796,20 @@ export default function Period() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [overlapPeriod, setOverlapPeriod] = useState<{
+        id: number;
+        start_date: string;
+        end_date: string;
+    } | null>(null);
+    const [pendingForce, setPendingForce] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isPinning, setIsPinning] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
+    const [showCloseModal, setShowCloseModal] = useState(false);
     const [pinnedTitle, setPinnedTitle] = useState<string | undefined>();
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
@@ -817,7 +873,29 @@ export default function Period() {
             ),
         [dailyExpenses],
     );
-    const filledDays = Object.keys(dailyExpenses).length;
+    const filledDays = useMemo(() => {
+        if (!startDate || !endDate) {
+            return 0;
+        }
+        const start = parseDate(startDate);
+        const end = parseDate(endDate);
+        if (
+            !Number.isFinite(start.getTime()) ||
+            !Number.isFinite(end.getTime())
+        ) {
+            return 0;
+        }
+        let count = 0;
+        const cursor = new Date(start);
+        while (cursor <= end) {
+            const key = formatDateKey(cursor);
+            if (dailyExpenses[key] !== undefined) {
+                count += 1;
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        return count;
+    }, [dailyExpenses, startDate, endDate]);
     const dailyActualAverage =
         filledDays > 0 ? totalDailyExpenses / filledDays : 0;
     const periodTitle = useMemo(() => {
@@ -839,6 +917,8 @@ export default function Period() {
     const remainingDays = Math.max(0, days - filledDays);
     const remainingDailyAverage =
         remainingDays > 0 ? actualRemaining / remainingDays : 0;
+    const isDailyComplete = days > 0 && filledDays >= days;
+    const isReadOnly = period.isClosed;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -867,7 +947,10 @@ export default function Period() {
 
         const cached = readCache();
         if (hasFullCache(cached)) {
-            setPeriod(cached);
+            setPeriod({
+                ...cached,
+                isClosed: Boolean(cached.isClosed),
+            });
             setIncomes(cached.incomes ?? []);
             setStartDate(cached.startDate ?? '');
             setEndDate(cached.endDate ?? '');
@@ -899,6 +982,7 @@ export default function Period() {
                     end_date: string;
                     daily_expenses: Record<string, number>;
                     is_pinned?: boolean;
+                    is_closed?: boolean;
                     incomes: { id: number; name: string; amount: number }[];
                     expenses: {
                         id: number;
@@ -920,6 +1004,7 @@ export default function Period() {
                 endDate: data.end_date,
                 dailyExpenses: data.daily_expenses ?? {},
                 isPinned: Boolean(data.is_pinned),
+                isClosed: Boolean(data.is_closed),
                 incomes: data.incomes.map((item) => ({
                     id: String(item.id),
                     name: item.name,
@@ -962,7 +1047,15 @@ export default function Period() {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (
+        force = false,
+        overrides?: { startDate?: string; endDate?: string },
+    ) => {
+        if (period.isClosed) {
+            return;
+        }
+        const nextStartDate = overrides?.startDate ?? startDate;
+        const nextEndDate = overrides?.endDate ?? endDate;
         const nextInvalidIncomeIds = getInvalidIncomeIds(incomes);
         if (nextInvalidIncomeIds.length > 0) {
             setInvalidIncomeIds(nextInvalidIncomeIds);
@@ -990,9 +1083,10 @@ export default function Period() {
                     'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
-                    start_date: startDate,
-                    end_date: endDate,
+                    start_date: nextStartDate,
+                    end_date: nextEndDate,
                     daily_expenses: dailyExpenses,
+                    force,
                     incomes: incomes.map((item) => ({
                         id: Number.isFinite(Number(item.id))
                             ? Number(item.id)
@@ -1019,22 +1113,42 @@ export default function Period() {
             });
 
             if (response.status === 409) {
+                const payload = (await response.json()) as {
+                    overlap?: { id: number; start_date: string; end_date: string };
+                };
+                if (payload.overlap) {
+                    setOverlapPeriod(payload.overlap);
+                    setPendingForce(true);
+                    return;
+                }
                 throw new Error('Период пересекается с существующим.');
             }
 
             if (!response.ok) {
+                if (response.status === 423) {
+                    const payload = (await response.json()) as {
+                        message?: string;
+                    };
+                    throw new Error(
+                        payload.message ?? 'Период закрыт и не редактируется.',
+                    );
+                }
                 throw new Error('Не удалось сохранить период.');
             }
 
             setSaveSuccess(true);
+            setOverlapPeriod(null);
+            setPendingForce(false);
             writeCache({
                 id: Number(periodId),
-                startDate,
-                endDate,
+                startDate: nextStartDate,
+                endDate: nextEndDate,
                 incomes,
                 expenses,
                 offIncomeExpenses,
                 dailyExpenses,
+                isPinned: period.isPinned,
+                isClosed: period.isClosed,
             });
         } catch (err) {
             setSaveError(
@@ -1048,6 +1162,9 @@ export default function Period() {
     };
 
     const handleAddIncome = () => {
+        if (period.isClosed) {
+            return;
+        }
         setIncomes((prev) => [
             ...prev,
             {
@@ -1095,6 +1212,64 @@ export default function Period() {
             );
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const handleClose = async () => {
+        if (isClosing || period.isClosed) {
+            return;
+        }
+        setIsClosing(true);
+        setSaveError(null);
+        try {
+            const token =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ?? '';
+            const response = await fetch(`/api/periods/${periodId}/close`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                },
+            });
+
+            if (!response.ok) {
+                const payload = (await response.json()) as {
+                    message?: string;
+                };
+                throw new Error(
+                    payload.message ?? 'Не удалось закрыть период.',
+                );
+            }
+
+            const payload = (await response.json()) as {
+                data?: { is_closed?: boolean };
+            };
+            const updated = {
+                ...period,
+                isClosed: payload.data?.is_closed ?? true,
+            };
+            setPeriod(updated);
+            setShowCloseModal(false);
+            writeCache({
+                id: Number(periodId),
+                startDate,
+                endDate,
+                incomes,
+                expenses,
+                offIncomeExpenses,
+                dailyExpenses,
+                isPinned: period.isPinned,
+                isClosed: updated.isClosed,
+            });
+        } catch (err) {
+            setSaveError(
+                err instanceof Error
+                    ? err.message
+                    : 'Не удалось закрыть период.',
+            );
+        } finally {
+            setIsClosing(false);
         }
     };
 
@@ -1215,6 +1390,17 @@ export default function Period() {
                         >
                             {period.isPinned ? 'Открепить' : 'Закрепить'}
                         </PillButton>
+                        {isDailyComplete && !period.isClosed && (
+                            <PillButton
+                                type="button"
+                                onClick={() => setShowCloseModal(true)}
+                                disabled={isClosing}
+                                tone="success"
+                                className="px-4 py-2"
+                            >
+                                Закрыть период
+                            </PillButton>
+                        )}
                         <PillButton
                             type="button"
                             onClick={handleDelete}
@@ -1256,6 +1442,7 @@ export default function Period() {
                             onAdd={handleAddIncome}
                             onBlurField={handleSave}
                             invalidNameIds={invalidIncomeIds}
+                            readOnly={isReadOnly}
                         />
 
                         <ExpensesBlock
@@ -1271,6 +1458,7 @@ export default function Period() {
                             idPrefix="e"
                             onBlurField={handleSave}
                             onAfterDelete={requestSaveAfterChange}
+                            readOnly={isReadOnly}
                         />
 
                         <OffIncomeBlock
@@ -1284,6 +1472,7 @@ export default function Period() {
                             idPrefix="o"
                             onBlurField={handleSave}
                             onAfterDelete={requestSaveAfterChange}
+                            readOnly={isReadOnly}
                         />
                     </div>
 
@@ -1298,6 +1487,7 @@ export default function Period() {
                                     }
                                     active={isEditingDates}
                                     activeTone="success"
+                                    disabled={isReadOnly}
                                 >
                                     {isEditingDates ? 'Готово' : 'Редактировать'}
                                 </PillButton>
@@ -1317,10 +1507,20 @@ export default function Period() {
                                         <input
                                             type="date"
                                             value={startDate}
-                                            onChange={(event) =>
-                                                setStartDate(event.target.value)
+                                            disabled={isReadOnly}
+                                            onChange={(event) => {
+                                                const nextValue =
+                                                    event.target.value;
+                                                setStartDate(nextValue);
+                                                void handleSave(false, {
+                                                    startDate: nextValue,
+                                                });
+                                            }}
+                                            min={
+                                                endDate
+                                                    ? addMonthsClamp(endDate, -3)
+                                                    : undefined
                                             }
-                                            onBlur={handleSave}
                                             max={endDate}
                                             className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
                                         />
@@ -1330,11 +1530,21 @@ export default function Period() {
                                         <input
                                             type="date"
                                             value={endDate}
-                                            onChange={(event) =>
-                                                setEndDate(event.target.value)
-                                            }
-                                            onBlur={handleSave}
+                                            disabled={isReadOnly}
+                                            onChange={(event) => {
+                                                const nextValue =
+                                                    event.target.value;
+                                                setEndDate(nextValue);
+                                                void handleSave(false, {
+                                                    endDate: nextValue,
+                                                });
+                                            }}
                                             min={startDate}
+                                            max={
+                                                startDate
+                                                    ? addMonthsClamp(startDate, 3)
+                                                    : undefined
+                                            }
                                             className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
                                         />
                                     </label>
@@ -1465,6 +1675,36 @@ export default function Period() {
                         onCancel={() => setShowPinModal(false)}
                         onConfirm={() => handleTogglePin(true)}
                         confirmDisabled={isPinning}
+                    />
+                )}
+
+                {showCloseModal && (
+                    <ConfirmClosePeriodModal
+                        onCancel={() => setShowCloseModal(false)}
+                        onConfirm={handleClose}
+                        confirmDisabled={isClosing}
+                    />
+                )}
+
+                {overlapPeriod && (
+                    <OverlapPeriodModal
+                        href={`/periods/${overlapPeriod.id}`}
+                        title={`${formatDateShort(
+                            overlapPeriod.start_date,
+                        )} — ${formatDateShort(overlapPeriod.end_date)}`}
+                        subtitle={`${calculateDaysInclusive(
+                            overlapPeriod.start_date,
+                            overlapPeriod.end_date,
+                        )} дней · ${formatMonthRange(
+                            overlapPeriod.start_date,
+                            overlapPeriod.end_date,
+                        )}`}
+                        onClose={() => {
+                            setOverlapPeriod(null);
+                            setPendingForce(false);
+                        }}
+                        onConfirm={() => handleSave(true)}
+                        confirmDisabled={!pendingForce || isSaving}
                     />
                 )}
 

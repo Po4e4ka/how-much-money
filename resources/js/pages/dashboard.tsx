@@ -22,6 +22,8 @@ type PeriodItem = {
     start_date: string;
     end_date: string;
     is_pinned?: boolean;
+    is_closed?: boolean;
+    actual_remaining?: number | null;
 };
 
 const normalizeDate = (value: string) => {
@@ -84,6 +86,24 @@ const formatMonthRange = (start: string, end: string) => {
     }
 
     return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
+};
+
+const addMonthsClamp = (value: string, months: number) => {
+    if (!value) {
+        return '';
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return '';
+    }
+    const targetMonth = month - 1 + months;
+    const targetYear = year + Math.floor(targetMonth / 12);
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+    const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+    const nextDay = Math.min(day, lastDay);
+    const nextMonth = String(normalizedMonth + 1).padStart(2, '0');
+    const nextDate = String(nextDay).padStart(2, '0');
+    return `${targetYear}-${nextMonth}-${nextDate}`;
 };
 
 const calculateDaysInclusive = (start: string, end: string) => {
@@ -308,6 +328,8 @@ export default function Dashboard() {
                                 onChange={(event) =>
                                     setStartDate(event.target.value)
                                 }
+                                min={endDate ? addMonthsClamp(endDate, -3) : undefined}
+                                max={endDate || undefined}
                                 className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
                             />
                         </label>
@@ -320,6 +342,7 @@ export default function Dashboard() {
                                     setEndDate(event.target.value)
                                 }
                                 min={startDate || undefined}
+                                max={startDate ? addMonthsClamp(startDate, 3) : undefined}
                                 className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
                             />
                         </label>
@@ -366,6 +389,12 @@ export default function Dashboard() {
                                                     id: pinned.id,
                                                     title: meta.title,
                                                     subtitle: meta.subtitle,
+                                                    isClosed: Boolean(
+                                                        pinned.is_closed,
+                                                    ),
+                                                    actualRemaining:
+                                                        pinned.actual_remaining ??
+                                                        null,
                                                 },
                                             ]}
                                         />
@@ -404,6 +433,9 @@ export default function Dashboard() {
                                         id: period.id,
                                         title: meta.title,
                                         subtitle: meta.subtitle,
+                                        isClosed: Boolean(period.is_closed),
+                                        actualRemaining:
+                                            period.actual_remaining ?? null,
                                     };
                                 })}
                             />
