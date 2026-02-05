@@ -1381,15 +1381,17 @@ export default function Period() {
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <PillButton
-                            type="button"
-                            onClick={() => handleTogglePin(false)}
-                            tone={period.isPinned ? 'danger' : 'success'}
-                            disabled={isPinning}
-                            className="px-4 py-2"
-                        >
-                            {period.isPinned ? 'Открепить' : 'Закрепить'}
-                        </PillButton>
+                        {!period.isClosed && (
+                            <PillButton
+                                type="button"
+                                onClick={() => handleTogglePin(false)}
+                                tone={period.isPinned ? 'danger' : 'success'}
+                                disabled={isPinning}
+                                className="px-4 py-2"
+                            >
+                                {period.isPinned ? 'Открепить' : 'Закрепить'}
+                            </PillButton>
+                        )}
                         {isDailyComplete && !period.isClosed && (
                             <PillButton
                                 type="button"
@@ -1421,7 +1423,7 @@ export default function Period() {
                 </section>
 
                 <section
-                    className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] animate-reveal"
+                    className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start animate-reveal"
                     style={delay(120)}
                 >
                     {isLoading && (
@@ -1434,7 +1436,7 @@ export default function Period() {
                             {loadError}
                         </div>
                     )}
-                    <div className="order-2 grid gap-4 lg:order-none">
+                    <div className="order-2 grid gap-4 lg:order-none lg:self-start">
                         <IncomeBlock
                             items={incomes}
                             setItems={setIncomes}
@@ -1476,7 +1478,7 @@ export default function Period() {
                         />
                     </div>
 
-                    <div className="order-1 grid gap-4 lg:order-none">
+                    <div className="order-1 grid gap-4 lg:order-none lg:self-start">
                         <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                             <div className="flex items-center justify-between">
                                 <BlockTitle>Дни периода</BlockTitle>
