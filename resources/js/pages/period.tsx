@@ -814,6 +814,12 @@ export default function Period() {
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
     const incomeNameError = 'Заполните названия прихода.';
+    const lastSavedDatesRef = useRef<{ startDate: string; endDate: string } | null>(
+        null,
+    );
+    const overlapDatesRef = useRef<{ startDate: string; endDate: string } | null>(
+        null,
+    );
 
     const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
     const hasFetchedRef = useRef(false);
@@ -957,6 +963,10 @@ export default function Period() {
             setExpenses(cached.expenses ?? []);
             setOffIncomeExpenses(cached.offIncomeExpenses ?? []);
             setDailyExpenses(cached.dailyExpenses ?? {});
+            lastSavedDatesRef.current = {
+                startDate: cached.startDate ?? '',
+                endDate: cached.endDate ?? '',
+            };
             setIsLoading(false);
             if (typeof navigator !== 'undefined' && !navigator.onLine) {
                 return;
@@ -1033,6 +1043,10 @@ export default function Period() {
             setDailyExpenses(normalized.dailyExpenses);
             setShowPinModal(false);
             setPinnedTitle(undefined);
+            lastSavedDatesRef.current = {
+                startDate: normalized.startDate,
+                endDate: normalized.endDate,
+            };
             writeCache(normalized);
             hasFetchedRef.current = true;
         } catch (err) {
@@ -1087,28 +1101,45 @@ export default function Period() {
                     end_date: nextEndDate,
                     daily_expenses: dailyExpenses,
                     force,
-                    incomes: incomes.map((item) => ({
-                        id: Number.isFinite(Number(item.id))
-                            ? Number(item.id)
-                            : undefined,
-                        name: item.name,
-                        amount: Number(item.amount) || 0,
-                    })),
-                    expenses: expenses.map((item) => ({
-                        id: Number.isFinite(Number(item.id))
-                            ? Number(item.id)
-                            : undefined,
-                        name: item.name,
-                        planned_amount: Number(item.plannedAmount) || 0,
-                        actual_amount: Number(item.actualAmount) || 0,
-                    })),
-                    external_expenses: offIncomeExpenses.map((item) => ({
-                        id: Number.isFinite(Number(item.id))
-                            ? Number(item.id)
-                            : undefined,
-                        name: item.name,
-                        amount: Number(item.amount) || 0,
-                    })),
+                    incomes: incomes
+                        .filter(
+                            (item) =>
+                                item.name.trim() !== '' && item.amount !== '',
+                        )
+                        .map((item) => ({
+                            id: Number.isFinite(Number(item.id))
+                                ? Number(item.id)
+                                : undefined,
+                            name: item.name,
+                            amount: Number(item.amount),
+                        })),
+                    expenses: expenses
+                        .filter(
+                            (item) =>
+                                item.name.trim() !== '' &&
+                                item.plannedAmount !== '' &&
+                                item.actualAmount !== '',
+                        )
+                        .map((item) => ({
+                            id: Number.isFinite(Number(item.id))
+                                ? Number(item.id)
+                                : undefined,
+                            name: item.name,
+                            planned_amount: Number(item.plannedAmount),
+                            actual_amount: Number(item.actualAmount),
+                        })),
+                    external_expenses: offIncomeExpenses
+                        .filter(
+                            (item) =>
+                                item.name.trim() !== '' && item.amount !== '',
+                        )
+                        .map((item) => ({
+                            id: Number.isFinite(Number(item.id))
+                                ? Number(item.id)
+                                : undefined,
+                            name: item.name,
+                            amount: Number(item.amount),
+                        })),
                 }),
             });
 
@@ -1117,8 +1148,16 @@ export default function Period() {
                     overlap?: { id: number; start_date: string; end_date: string };
                 };
                 if (payload.overlap) {
+                    overlapDatesRef.current = {
+                        startDate: nextStartDate,
+                        endDate: nextEndDate,
+                    };
                     setOverlapPeriod(payload.overlap);
                     setPendingForce(true);
+                    if (lastSavedDatesRef.current) {
+                        setStartDate(lastSavedDatesRef.current.startDate);
+                        setEndDate(lastSavedDatesRef.current.endDate);
+                    }
                     return;
                 }
                 throw new Error('Период пересекается с существующим.');
@@ -1136,9 +1175,16 @@ export default function Period() {
                 throw new Error('Не удалось сохранить период.');
             }
 
+            setStartDate(nextStartDate);
+            setEndDate(nextEndDate);
             setSaveSuccess(true);
             setOverlapPeriod(null);
             setPendingForce(false);
+            overlapDatesRef.current = null;
+            lastSavedDatesRef.current = {
+                startDate: nextStartDate,
+                endDate: nextEndDate,
+            };
             writeCache({
                 id: Number(periodId),
                 startDate: nextStartDate,
@@ -1364,7 +1410,13 @@ export default function Period() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={periodTitle} />
-            <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
+            <div
+                className={`relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee]${
+                    period.isClosed
+                        ? ' bg-emerald-50/70 dark:bg-emerald-950/20'
+                        : ''
+                }`}
+            >
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
                 <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
 
@@ -1380,6 +1432,11 @@ export default function Period() {
                             {periodSubtitle}
                         </p>
                     </div>
+                    {period.isClosed && (
+                        <div className="flex-1 text-center text-sm font-semibold text-emerald-600 dark:text-emerald-300">
+                            Период закрыт
+                        </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                         {!period.isClosed && (
                             <PillButton
@@ -1704,8 +1761,11 @@ export default function Period() {
                         onClose={() => {
                             setOverlapPeriod(null);
                             setPendingForce(false);
+                            overlapDatesRef.current = null;
                         }}
-                        onConfirm={() => handleSave(true)}
+                        onConfirm={() =>
+                            handleSave(true, overlapDatesRef.current ?? undefined)
+                        }
                         confirmDisabled={!pendingForce || isSaving}
                     />
                 )}
