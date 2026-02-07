@@ -1,6 +1,7 @@
 import { BlockTitle } from '@/components/block-title';
 import { PillButton } from '@/components/pill-button';
 import { formatCurrency, formatSignedCurrency, toIntegerValue } from '@/lib/number';
+import { ExpenseNameInput } from '@/components/period/expense-name-input';
 import type { ExpensesBlockProps } from '@/types/period';
 
 export const ExpensesBlock = ({
@@ -18,89 +19,92 @@ export const ExpensesBlock = ({
     onAfterDelete,
     readOnly = false,
 }: ExpensesBlockProps) => (
-    <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-        <div className="flex items-center justify-between">
-            <BlockTitle>{title}</BlockTitle>
-            <div className="flex items-center gap-2">
-                <PillButton
-                    type="button"
-                    onClick={() =>
-                        setItems((prev) => [
-                            ...prev,
-                            {
-                                id: `${idPrefix}${Date.now()}`,
-                                name: '',
-                                plannedAmount: '',
-                                actualAmount: '',
-                                actualTouched: false,
-                            },
-                        ])
-                    }
-                    disabled={readOnly}
-                >
-                    + Строка
-                </PillButton>
-                <PillButton
-                    type="button"
-                    onClick={onToggleDelete}
-                    active={showDelete}
-                    activeTone="danger"
-                    disabled={readOnly}
-                >
-                    − Удаление
-                </PillButton>
-            </div>
-        </div>
-        <div
-            className={`mt-3 grid items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 ${
-                showDelete
-                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
-            }`}
-        >
-            <span>
-                <span className="sm:hidden">Название</span>
-                <span className="hidden sm:inline">Название</span>
-            </span>
-            <span className="text-right">План</span>
-            <span className="text-right">Факт</span>
-            <span className="text-right">
-                <span className="sm:hidden">Разн</span>
-                <span className="hidden sm:inline">Разница</span>
-            </span>
-            {showDelete && <span className="text-center">—</span>}
-        </div>
-        <div className="mt-3 grid gap-2">
-            {items.map((item, index) => (
-                <div
-                    key={item.id}
-                    className={`grid items-center gap-2 ${
-                        showDelete
-                            ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                            : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
-                    }`}
-                >
-                    <input
-                        type="text"
-                        placeholder={`Трата ${index + 1}`}
-                        value={item.name}
-                        disabled={readOnly}
-                        onChange={(event) =>
-                            setItems((prev) =>
-                                prev.map((expense) =>
-                                    expense.id === item.id
-                                        ? {
-                                              ...expense,
-                                              name: event.target.value,
-                                          }
-                                        : expense,
-                                ),
-                            )
+        <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+            <div className="flex items-center justify-between">
+                <BlockTitle>{title}</BlockTitle>
+                <div className="flex items-center gap-2">
+                    <PillButton
+                        type="button"
+                        onClick={() =>
+                            setItems((prev) => [
+                                ...prev,
+                                {
+                                    id: `${idPrefix}${Date.now()}`,
+                                    name: '',
+                                    plannedAmount: '',
+                                    actualAmount: '',
+                                    actualTouched: false,
+                                },
+                            ])
                         }
-                        onBlur={onBlurField}
-                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
-                    />
-                    <input
+                        disabled={readOnly}
+                    >
+                        + Строка
+                    </PillButton>
+                    <PillButton
+                        type="button"
+                        onClick={onToggleDelete}
+                        active={showDelete}
+                        activeTone="danger"
+                        disabled={readOnly}
+                    >
+                        − Удаление
+                    </PillButton>
+                </div>
+            </div>
+            <div
+                className={`mt-3 grid items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 ${
+                    showDelete
+                        ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                        : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
+                }`}
+            >
+                <span>
+                    <span className="sm:hidden">Название</span>
+                    <span className="hidden sm:inline">Название</span>
+                </span>
+                <span className="text-right">План</span>
+                <span className="text-right">Факт</span>
+                <span className="text-right">
+                    <span className="sm:hidden">Разн</span>
+                    <span className="hidden sm:inline">Разница</span>
+                </span>
+                {showDelete && <span className="text-center">—</span>}
+            </div>
+            <div className="mt-3 grid gap-2">
+                {items.map((item, index) => {
+                    const usedNames = items
+                        .filter((entry) => entry.id !== item.id)
+                        .map((entry) => entry.name);
+                    return (
+                    <div
+                        key={item.id}
+                        className={`grid items-center gap-2 ${
+                            showDelete
+                                ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                                : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
+                        }`}
+                    >
+                        <ExpenseNameInput
+                            value={item.name}
+                            placeholder={`Трата ${index + 1}`}
+                            disabled={readOnly}
+                            usedNames={usedNames}
+                            onChange={(nextValue) =>
+                                setItems((prev) =>
+                                    prev.map((expense) =>
+                                        expense.id === item.id
+                                            ? {
+                                                  ...expense,
+                                                  name: nextValue,
+                                              }
+                                            : expense,
+                                    ),
+                                )
+                            }
+                            onBlur={onBlurField}
+                        />
+                            <input
                         type="number"
                         min={0}
                         step={1}
@@ -229,35 +233,36 @@ export const ExpensesBlock = ({
                             —
                         </button>
                     )}
-                </div>
-            ))}
-        </div>
-        <div
-            className={`mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
-                showDelete
-                    ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
-                    : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
-            }`}
-        >
-            <span>{totalLabel}</span>
-            <span className="text-right font-display text-sm tabular-nums">
-                {formatCurrency(totalPlanned)}
-            </span>
-            <span className="text-right font-display text-sm tabular-nums">
-                {formatCurrency(totalActual)}
-            </span>
-            <span
-                className={`text-right font-display text-sm tabular-nums ${
-                    totalDifference > 0
-                        ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
-                        : totalDifference < 0
-                          ? 'text-[#b0352b] dark:text-[#ff8b7c]'
-                          : 'text-[#6a5d52] dark:text-white/70'
+                    </div>
+                );
+                })}
+            </div>
+            <div
+                className={`mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
+                    showDelete
+                        ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_auto]'
+                        : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.7fr)]'
                 }`}
             >
-                {formatSignedCurrency(totalDifference)}
-            </span>
-            {showDelete && <span />}
+                <span>{totalLabel}</span>
+                <span className="text-right font-display text-sm tabular-nums">
+                    {formatCurrency(totalPlanned)}
+                </span>
+                <span className="text-right font-display text-sm tabular-nums">
+                    {formatCurrency(totalActual)}
+                </span>
+                <span
+                    className={`text-right font-display text-sm tabular-nums ${
+                        totalDifference > 0
+                            ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
+                            : totalDifference < 0
+                              ? 'text-[#b0352b] dark:text-[#ff8b7c]'
+                              : 'text-[#6a5d52] dark:text-white/70'
+                    }`}
+                >
+                    {formatSignedCurrency(totalDifference)}
+                </span>
+                {showDelete && <span />}
+            </div>
         </div>
-    </div>
 );

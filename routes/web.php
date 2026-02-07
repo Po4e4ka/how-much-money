@@ -45,6 +45,8 @@ Route::middleware(['auth', 'verified', 'api'])
             ->name('api.periods.pin');
         Route::post('periods/{period}/close', [PeriodController::class, 'close'])
             ->name('api.periods.close');
+        Route::get('periods/{period}/expense-suggestions', [PeriodController::class, 'expenseSuggestions'])
+            ->name('api.periods.expense-suggestions');
         Route::put('periods/{period}', [PeriodController::class, 'update'])
             ->name('api.periods.update');
         Route::delete('periods/{period}', [PeriodController::class, 'destroy'])

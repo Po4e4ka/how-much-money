@@ -115,6 +115,55 @@ class PeriodController extends Controller
         ]);
     }
 
+    public function expenseSuggestions(Request $request, Period $period)
+    {
+        if ($period->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $userId = $request->user()->id;
+        $type = $request->query('type');
+        $allowedTypes = ['income', 'mandatory', 'external'];
+        $types = in_array($type, $allowedTypes, true)
+            ? [$type]
+            : ['mandatory', 'external'];
+
+        $previousPeriod = Period::query()
+            ->where('user_id', $userId)
+            ->where('id', '<', $period->id)
+            ->orderByDesc('id')
+            ->first();
+
+        $previousNames = [];
+        if ($previousPeriod) {
+            $previousNames = $previousPeriod->expenses()
+                ->whereIn('expenses.type', $types)
+                ->select('expenses.name')
+                ->distinct()
+                ->orderBy('expenses.name')
+                ->pluck('expenses.name')
+                ->all();
+        }
+
+        $allNames = Expense::query()
+            ->select('expenses.name')
+            ->join('period_expense', 'expenses.id', '=', 'period_expense.expense_id')
+            ->join('periods', 'periods.id', '=', 'period_expense.period_id')
+            ->where('periods.user_id', $userId)
+            ->whereIn('expenses.type', $types)
+            ->distinct()
+            ->orderBy('expenses.name')
+            ->pluck('expenses.name')
+            ->all();
+
+        return response()->json([
+            'data' => [
+                'previous' => $previousNames,
+                'all' => $allNames,
+            ],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

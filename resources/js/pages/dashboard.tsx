@@ -5,6 +5,7 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem, SharedData } from '@/types';
 import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { PeriodList } from '@/components/period-list';
+import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { UpdateInfoModal } from '@/components/update-info-modal';
 import { delay } from '@/lib/animation';
 import {
@@ -61,6 +62,7 @@ export default function Dashboard() {
     const [showUpdateInfo, setShowUpdateInfo] = useState(
         auth.user?.is_info_shown === false,
     );
+    const [showSessionExpired, setShowSessionExpired] = useState(false);
 
     useEffect(() => {
         setShowUpdateInfo(auth.user?.is_info_shown === false);
@@ -79,9 +81,15 @@ export default function Dashboard() {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': token,
             },
-        }).catch((err) => {
-            console.error(err);
-        });
+        })
+            .then((response) => {
+                if (response.status === 419) {
+                    setShowSessionExpired(true);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+            });
     };
 
     const fetchPeriods = async () => {
@@ -162,6 +170,11 @@ export default function Dashboard() {
                     force: Boolean(force),
                 }),
             });
+
+            if (response.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
 
             if (response.status === 409) {
                 const payload = (await response.json()) as {
@@ -387,6 +400,12 @@ export default function Dashboard() {
                 )}
                 {showUpdateInfo && (
                     <UpdateInfoModal onConfirm={handleInfoShown} />
+                )}
+                {showSessionExpired && (
+                    <SessionExpiredModal
+                        onClose={() => setShowSessionExpired(false)}
+                        onReload={() => window.location.reload()}
+                    />
                 )}
             </div>
         </AppLayout>

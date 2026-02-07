@@ -15,6 +15,8 @@ import { IncomeBlock } from '@/components/period/income-block';
 import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PlannedAverageCard } from '@/components/period/planned-average-card';
 import { RemainingDailyCard } from '@/components/period/remaining-daily-card';
+import { SessionExpiredModal } from '@/components/session-expired-modal';
+import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
 import { delay } from '@/lib/animation';
 import {
     addMonthsClamp,
@@ -82,6 +84,7 @@ export default function Period() {
     const [isClosing, setIsClosing] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
     const [showCloseModal, setShowCloseModal] = useState(false);
+    const [showSessionExpired, setShowSessionExpired] = useState(false);
     const [pinnedTitle, setPinnedTitle] = useState<string | undefined>();
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
@@ -511,6 +514,11 @@ export default function Period() {
                 },
             });
 
+            if (response.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
+
             if (!response.ok) {
                 const payload = (await response.json()) as {
                     message?: string;
@@ -573,6 +581,11 @@ export default function Period() {
                 }),
             });
 
+            if (response.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
+
             if (response.status === 409) {
                 const payload = (await response.json()) as {
                     pinned?: { start_date: string; end_date: string };
@@ -617,6 +630,7 @@ export default function Period() {
         hasFetchedRef.current = false;
         void fetchPeriod();
     }, [periodId]);
+
 
     useEffect(() => {
         if (!isSaving && pendingSaveRef.current) {
@@ -726,48 +740,69 @@ export default function Period() {
                         </div>
                     )}
                     <div className="order-2 grid gap-4 lg:order-none lg:self-start">
-                        <IncomeBlock
-                            items={incomes}
-                            setItems={setIncomes}
-                            totalAmount={totalIncome}
-                            onAdd={handleAddIncome}
-                            showDelete={showDelete}
-                            onToggleDelete={() => setShowDelete((prev) => !prev)}
-                            onBlurField={handleSave}
-                            onAfterDelete={requestSaveAfterChange}
-                            invalidNameIds={invalidIncomeIds}
-                            readOnly={isReadOnly}
-                        />
+                        <ExpenseSuggestionsProvider
+                            periodId={periodId}
+                            type="income"
+                        >
+                            <IncomeBlock
+                                items={incomes}
+                                setItems={setIncomes}
+                                totalAmount={totalIncome}
+                                onAdd={handleAddIncome}
+                                showDelete={showDelete}
+                                onToggleDelete={() =>
+                                    setShowDelete((prev) => !prev)
+                                }
+                                onBlurField={handleSave}
+                                onAfterDelete={requestSaveAfterChange}
+                                invalidNameIds={invalidIncomeIds}
+                                readOnly={isReadOnly}
+                            />
+                        </ExpenseSuggestionsProvider>
 
-                        <ExpensesBlock
-                            title="Обязательные траты"
-                            items={expenses}
-                            setItems={setExpenses}
-                            showDelete={showDelete}
-                            onToggleDelete={() => setShowDelete((prev) => !prev)}
-                            totalLabel="Итого обязательных"
-                            totalPlanned={totalPlannedExpenses}
-                            totalActual={totalActualExpenses}
-                            totalDifference={totalDifference}
-                            idPrefix="e"
-                            onBlurField={handleSave}
-                            onAfterDelete={requestSaveAfterChange}
-                            readOnly={isReadOnly}
-                        />
+                        <ExpenseSuggestionsProvider
+                            periodId={periodId}
+                            type="mandatory"
+                        >
+                            <ExpensesBlock
+                                title="Обязательные траты"
+                                items={expenses}
+                                setItems={setExpenses}
+                                showDelete={showDelete}
+                                onToggleDelete={() =>
+                                    setShowDelete((prev) => !prev)
+                                }
+                                totalLabel="Итого обязательных"
+                                totalPlanned={totalPlannedExpenses}
+                                totalActual={totalActualExpenses}
+                                totalDifference={totalDifference}
+                                idPrefix="e"
+                                onBlurField={handleSave}
+                                onAfterDelete={requestSaveAfterChange}
+                                readOnly={isReadOnly}
+                            />
+                        </ExpenseSuggestionsProvider>
 
-                        <OffIncomeBlock
-                            title="Сторонние траты"
-                            items={offIncomeExpenses}
-                            setItems={setOffIncomeExpenses}
-                            showDelete={showDelete}
-                            onToggleDelete={() => setShowDelete((prev) => !prev)}
-                            totalLabel="Итого сторонних"
-                            totalAmount={totalOffIncome}
-                            idPrefix="o"
-                            onBlurField={handleSave}
-                            onAfterDelete={requestSaveAfterChange}
-                            readOnly={isReadOnly}
-                        />
+                        <ExpenseSuggestionsProvider
+                            periodId={periodId}
+                            type="external"
+                        >
+                            <OffIncomeBlock
+                                title="Сторонние траты"
+                                items={offIncomeExpenses}
+                                setItems={setOffIncomeExpenses}
+                                showDelete={showDelete}
+                                onToggleDelete={() =>
+                                    setShowDelete((prev) => !prev)
+                                }
+                                totalLabel="Итого сторонних"
+                                totalAmount={totalOffIncome}
+                                idPrefix="o"
+                                onBlurField={handleSave}
+                                onAfterDelete={requestSaveAfterChange}
+                                readOnly={isReadOnly}
+                            />
+                        </ExpenseSuggestionsProvider>
                     </div>
 
                     <div className="order-1 grid gap-4 lg:order-none lg:self-start">
@@ -839,6 +874,13 @@ export default function Period() {
                         onCancel={() => setShowCloseModal(false)}
                         onConfirm={handleClose}
                         confirmDisabled={isClosing}
+                    />
+                )}
+
+                {showSessionExpired && (
+                    <SessionExpiredModal
+                        onClose={() => setShowSessionExpired(false)}
+                        onReload={() => window.location.reload()}
                     />
                 )}
 
