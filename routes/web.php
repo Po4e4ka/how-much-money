@@ -12,6 +12,10 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+Route::get('onboarding', function () {
+    return Inertia::render('onboarding');
+})->name('onboarding');
+
 Route::get('dashboard', function () {
     return Inertia::render('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
