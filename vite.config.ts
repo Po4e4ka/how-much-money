@@ -39,7 +39,7 @@ export default defineConfig({
                 'pwa-512-maskable.png',
             ],
             manifest: {
-                name: 'How much money?',
+                name: 'How much money',
                 short_name: 'HMM',
                 description: 'Финансовые периоды и расходы',
                 lang: 'ru',

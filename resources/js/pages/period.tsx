@@ -8,7 +8,11 @@ import { ConfirmPinModal } from '@/components/confirm-pin-modal';
 import { ConfirmClosePeriodModal } from '@/components/confirm-close-period-modal';
 import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { BlockTitle } from '@/components/block-title';
+import { BlockDescriptionText } from '@/components/block-description-text';
+import { BlockSepLine } from '@/components/block-sep-line';
 import { BigDigit } from '@/components/big-digit';
+import { DailyExpensesCard } from '@/components/daily-expenses-card';
+import { PeriodDaysCard } from '@/components/period-days-card';
 import { delay } from '@/lib/animation';
 import {
     addMonthsClamp,
@@ -1399,104 +1403,44 @@ export default function Period() {
                     </div>
 
                     <div className="order-1 grid gap-4 lg:order-none lg:self-start">
-                        <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-                            <div className="flex items-center justify-between">
-                                <BlockTitle>Дни периода</BlockTitle>
-                                <PillButton
-                                    type="button"
-                                    onClick={() =>
-                                        setIsEditingDates((prev) => !prev)
-                                    }
-                                    active={isEditingDates}
-                                    activeTone="success"
-                                    disabled={isReadOnly}
-                                >
-                                    {isEditingDates ? 'Готово' : 'Редактировать'}
-                                </PillButton>
-                            </div>
-                            <div className="mt-3 flex items-center gap-3">
-                                <div className="px-1 text-base font-semibold tabular-nums">
-                                    {days}
-                                </div>
-                                <span className="text-xs text-[#6a5d52] dark:text-white/60">
-                                    дней
-                                </span>
-                            </div>
-                            {isEditingDates && (
-                                <div className="mt-3 grid gap-2 grid-cols-2">
-                                    <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
-                                        Начало
-                                        <input
-                                            type="date"
-                                            value={startDate}
-                                            disabled={isReadOnly}
-                                            onChange={(event) => {
-                                                const nextValue =
-                                                    event.target.value;
-                                                setStartDate(nextValue);
-                                                void handleSave(false, {
-                                                    startDate: nextValue,
-                                                });
-                                            }}
-                                            min={
-                                                endDate
-                                                    ? addMonthsClamp(endDate, -3)
-                                                    : undefined
-                                            }
-                                            max={endDate}
-                                            className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
-                                        />
-                                    </label>
-                                    <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
-                                        Конец
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            disabled={isReadOnly}
-                                            onChange={(event) => {
-                                                const nextValue =
-                                                    event.target.value;
-                                                setEndDate(nextValue);
-                                                void handleSave(false, {
-                                                    endDate: nextValue,
-                                                });
-                                            }}
-                                            min={startDate}
-                                            max={
-                                                startDate
-                                                    ? addMonthsClamp(startDate, 3)
-                                                    : undefined
-                                            }
-                                            className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
-                                        />
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                        <Link
-                            href={`/periods/${periodId}/daily`}
-                            prefetch
-                            className="group rounded-lg border border-[#1e7b4f]/30 bg-white/90 px-5 py-4 text-sm text-[#1c1a17] shadow-[0_24px_48px_-28px_rgba(30,123,79,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-30px_rgba(30,123,79,0.65)] dark:border-[#7ce0b3]/30 dark:bg-white/10 dark:text-white"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <BlockTitle>Ежедневные траты</BlockTitle>
-                                <PillButton as="span">
-                                    Перейти к дневным значениям
-                                </PillButton>
-                            </div>
-                        </Link>
+                        <PeriodDaysCard
+                            days={days}
+                            startDate={startDate}
+                            endDate={endDate}
+                            isEditing={isEditingDates}
+                            readOnly={isReadOnly}
+                            onToggleEditing={() =>
+                                setIsEditingDates((prev) => !prev)
+                            }
+                            onStartDateChange={(nextValue) => {
+                                setStartDate(nextValue);
+                                void handleSave(false, {
+                                    startDate: nextValue,
+                                });
+                            }}
+                            onEndDateChange={(nextValue) => {
+                                setEndDate(nextValue);
+                                void handleSave(false, {
+                                    endDate: nextValue,
+                                });
+                            }}
+                            minStartDate={
+                                endDate
+                                    ? addMonthsClamp(endDate, -3)
+                                    : undefined
+                            }
+                            maxStartDate={endDate}
+                            minEndDate={startDate}
+                            maxEndDate={
+                                startDate ? addMonthsClamp(startDate, 3) : undefined
+                            }
+                        />
+                        <DailyExpensesCard href={`/periods/${periodId}/daily`} />
                         <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
-                            <BlockTitle>Планируемое среднее в день</BlockTitle>
-                            <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
-                                (Приход − обязательные) / дни
-                            </p>
-                            <BigDigit className="mt-3">
-                                {formatCurrency(dailyAverage)}
-                            </BigDigit>
-
-                            <div className="mt-4 grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
-                                <div className="h-px w-full bg-black/10 dark:bg-white/10" />
-                                <BlockTitle>Планируемая сумма на период</BlockTitle>
+                            <div className="grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                                <BlockTitle tooltipText="Приход − план = сумма в период">
+                                    Планируемая сумма на период
+                                </BlockTitle>
                                 <FormulaRow>
                                     <FormulaValue className="text-[#1e7b4f] dark:text-[#7ce0b3]">
                                         {formatCurrency(totalIncome)}
@@ -1507,7 +1451,7 @@ export default function Period() {
                                     </FormulaValue>
                                     <FormulaOp>=</FormulaOp>
                                     <FormulaValue
-                                        className={`${
+                                        className={`text-2xl ${
                                             plannedPeriodSum >= 0
                                                 ? 'text-[#1e7b4f] dark:text-[#7ce0b3]'
                                                 : 'text-[#b0352b] dark:text-[#ff8b7c]'
@@ -1516,19 +1460,23 @@ export default function Period() {
                                         {formatSignedCurrency(plannedPeriodSum)}
                                     </FormulaValue>
                                 </FormulaRow>
-
-                                <div className="text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
-                                    Приход − план = сумма в период
-                                </div>
                             </div>
+                            <BlockSepLine className="mt-4" />
+                            <BlockTitle className="mt-4" >Планируемое среднее в день</BlockTitle>
+                            <BlockDescriptionText>
+                                ({formatCurrency(plannedPeriodSum)} / {days || 0} д.)
+                            </BlockDescriptionText>
+                            <BigDigit className="mt-3">
+                                {formatCurrency(dailyAverage)}
+                            </BigDigit>
                         </div>
                         <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
                             <BlockTitle tooltipText="Фактический остаток / количество незаполненных (непрошедших) дней">
                                 Расчётное в день на оставшиеся дни
                             </BlockTitle>
-                            <p className="mt-2 text-xs text-[#6a5d52] dark:text-white/60">
+                            <BlockDescriptionText>
                                 ({formatCurrency(actualRemaining)} / {remainingDays || 0} д.)
-                            </p>
+                            </BlockDescriptionText>
                             <BigDigit className="mt-3">
                                 {formatCurrency(remainingDailyAverage)}
                             </BigDigit>
@@ -1564,7 +1512,7 @@ export default function Period() {
                                 </FormulaValue>
                                 <FormulaOp>=</FormulaOp>
                                 <FormulaValue
-                                    className={`${
+                                    className={`text-2xl ${
                                         plannedPeriodSum +
                                             totalDifference -
                                             totalDailyExpenses >=
@@ -1580,7 +1528,7 @@ export default function Period() {
                                     )}
                                 </FormulaValue>
                             </FormulaRow>
-                            <div className="mt-4 h-px w-full bg-black/10 dark:bg-white/10" />
+                            <BlockSepLine className="mt-4" />
                             <BlockTitle className="mt-4">
                                 Фактическое среднее в день за период
                             </BlockTitle>
