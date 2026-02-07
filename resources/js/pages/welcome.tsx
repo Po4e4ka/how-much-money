@@ -3,8 +3,7 @@ import type { CSSProperties } from 'react';
 import { useEffect } from 'react';
 import { dashboard, login, register } from '@/routes';
 import type { SharedData } from '@/types';
-
-const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
+import { delay } from '@/lib/animation';
 
 export default function Welcome({
     canRegister = true,

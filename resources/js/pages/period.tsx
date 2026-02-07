@@ -1,5 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import type { CSSProperties, Dispatch, SetStateAction } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -10,40 +9,39 @@ import { ConfirmClosePeriodModal } from '@/components/confirm-close-period-modal
 import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { BlockTitle } from '@/components/block-title';
 import { BigDigit } from '@/components/big-digit';
-
-const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
-
-type ExpenseItem = {
-    id: string;
-    name: string;
-    plannedAmount: number | '';
-    actualAmount: number | '';
-    actualTouched?: boolean;
-};
-
-type OffIncomeItem = {
-    id: string;
-    name: string;
-    amount: number | '';
-};
-
-type IncomeItem = {
-    id: string;
-    name: string;
-    amount: number | '';
-};
-
-type PeriodData = {
-    id: number;
-    startDate: string;
-    endDate: string;
-    incomes: IncomeItem[];
-    expenses: ExpenseItem[];
-    offIncomeExpenses: OffIncomeItem[];
-    dailyExpenses: Record<string, number>;
-    isPinned: boolean;
-    isClosed: boolean;
-};
+import { delay } from '@/lib/animation';
+import {
+    addMonthsClamp,
+    calculateDaysInclusive,
+    formatDateShort,
+    formatMonthRange,
+} from '@/lib/date';
+import {
+    formatCurrency,
+    formatSignedCurrency,
+    toIntegerValue,
+    toNumberOrZero,
+} from '@/lib/number';
+import {
+    calculateAmountTotal,
+    calculateDailyExpensesTotal,
+    calculateExpenseTotals,
+    calculateFilledDays,
+    calculatePeriodMetrics,
+    getInvalidIncomeIds,
+} from '@/lib/period-calculations';
+import type {
+    ExpenseItem,
+    ExpensesBlockProps,
+    FormulaOpProps,
+    FormulaRowProps,
+    FormulaValueProps,
+    IncomeBlockProps,
+    IncomeItem,
+    OffIncomeBlockProps,
+    OffIncomeItem,
+    PeriodData,
+} from '@/types/period';
 
 const emptyPeriod: PeriodData = {
     id: 0,
@@ -55,162 +53,6 @@ const emptyPeriod: PeriodData = {
     dailyExpenses: {},
     isPinned: false,
     isClosed: false,
-};
-
-const formatCurrency = (value: number) =>
-    `${Math.max(0, Math.round(value)).toLocaleString('ru-RU')} ₽`;
-
-const formatSignedCurrency = (value: number) => {
-    const rounded = Math.round(value);
-    if (rounded === 0) {
-        return '0 ₽';
-    }
-    const sign = rounded > 0 ? '+' : '−';
-    return `${sign}${Math.abs(rounded).toLocaleString('ru-RU')} ₽`;
-};
-
-const parseDate = (value: string) => {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, (month ?? 1) - 1, day ?? 1);
-};
-
-const formatDateShort = (value: string) => {
-    const date = parseDate(value);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}.${month}`;
-};
-
-const formatMonthYear = (value: string) =>
-    new Intl.DateTimeFormat('ru-RU', {
-        month: 'long',
-        year: 'numeric',
-    }).format(parseDate(value));
-
-const addMonthsClamp = (value: string, months: number) => {
-    if (!value) {
-        return '';
-    }
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-        return '';
-    }
-    const targetMonth = month - 1 + months;
-    const targetYear = year + Math.floor(targetMonth / 12);
-    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
-    const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
-    const nextDay = Math.min(day, lastDay);
-    const nextMonth = String(normalizedMonth + 1).padStart(2, '0');
-    const nextDate = String(nextDay).padStart(2, '0');
-    return `${targetYear}-${nextMonth}-${nextDate}`;
-};
-
-const formatMonthRange = (start: string, end: string) => {
-    const formatter = new Intl.DateTimeFormat('ru-RU', {
-        month: 'short',
-    });
-    const startMonth = formatter.format(parseDate(start));
-    const endMonth = formatter.format(parseDate(end));
-    const startYear = parseDate(start).getFullYear();
-    const endYear = parseDate(end).getFullYear();
-
-    if (startYear === endYear) {
-        if (startMonth === endMonth) {
-            return formatMonthYear(start);
-        }
-        return `${startMonth}–${endMonth} ${startYear}`;
-    }
-
-    return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
-};
-
-const calculateDaysInclusive = (start: string, end: string) => {
-    const startDate = parseDate(start);
-    const endDate = parseDate(end);
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return Math.max(1, diffDays + 1);
-};
-
-const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-const toIntegerValue = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits === '') {
-        return '';
-    }
-    return Number(digits);
-};
-
-const toNumberOrZero = (value: number | '') =>
-    value === '' ? 0 : Number(value);
-
-const getInvalidIncomeIds = (items: IncomeItem[]) =>
-    items
-        .filter((item) => item.name.trim() === '' && item.amount !== '')
-        .map((item) => item.id);
-
-type ExpensesBlockProps = {
-    title: string;
-    items: ExpenseItem[];
-    setItems: Dispatch<SetStateAction<ExpenseItem[]>>;
-    showDelete: boolean;
-    onToggleDelete: () => void;
-    totalLabel: string;
-    totalPlanned: number;
-    totalActual: number;
-    totalDifference: number;
-    idPrefix: string;
-    onBlurField: () => void;
-    onAfterDelete: () => void;
-    readOnly?: boolean;
-};
-
-type OffIncomeBlockProps = {
-    title: string;
-    items: OffIncomeItem[];
-    setItems: Dispatch<SetStateAction<OffIncomeItem[]>>;
-    showDelete: boolean;
-    onToggleDelete: () => void;
-    totalLabel: string;
-    totalAmount: number;
-    idPrefix: string;
-    onBlurField: () => void;
-    onAfterDelete: () => void;
-    readOnly?: boolean;
-};
-
-type IncomeBlockProps = {
-    items: IncomeItem[];
-    setItems: Dispatch<SetStateAction<IncomeItem[]>>;
-    totalAmount: number;
-    onAdd: () => void;
-    showDelete: boolean;
-    onToggleDelete: () => void;
-    onBlurField: () => void;
-    onAfterDelete: () => void;
-    invalidNameIds: string[];
-    readOnly?: boolean;
-};
-
-type FormulaRowProps = {
-    children: React.ReactNode;
-    className?: string;
-};
-
-type FormulaValueProps = {
-    children: React.ReactNode;
-    className?: string;
-};
-
-type FormulaOpProps = {
-    children: React.ReactNode;
-    className?: string;
 };
 
 const FormulaRow = ({ children, className }: FormulaRowProps) => (
@@ -906,23 +748,10 @@ export default function Period() {
         win.__periodCache[cacheKey] = data;
     };
 
-    const totalPlannedExpenses = (expenses ?? []).reduce(
-        (sum, item) => sum + (Number(item.plannedAmount) || 0),
-        0,
-    );
-    const totalActualExpenses = (expenses ?? []).reduce(
-        (sum, item) => sum + (Number(item.actualAmount) || 0),
-        0,
-    );
-    const totalDifference = totalPlannedExpenses - totalActualExpenses;
-    const totalOffIncome = (offIncomeExpenses ?? []).reduce(
-        (sum, item) => sum + (Number(item.amount) || 0),
-        0,
-    );
-    const totalIncome = (incomes ?? []).reduce(
-        (sum, item) => sum + (Number(item.amount) || 0),
-        0,
-    );
+    const { totalPlanned: totalPlannedExpenses, totalActual: totalActualExpenses, totalDifference } =
+        calculateExpenseTotals(expenses ?? []);
+    const totalOffIncome = calculateAmountTotal(offIncomeExpenses ?? []);
+    const totalIncome = calculateAmountTotal(incomes ?? []);
     const days = useMemo(() => {
         if (!startDate || !endDate) {
             return 0;
@@ -930,36 +759,13 @@ export default function Period() {
         return calculateDaysInclusive(startDate, endDate);
     }, [startDate, endDate]);
     const totalDailyExpenses = useMemo(
-        () =>
-            Object.values(dailyExpenses).reduce(
-                (sum, value) => sum + (value || 0),
-                0,
-            ),
+        () => calculateDailyExpensesTotal(dailyExpenses),
         [dailyExpenses],
     );
-    const filledDays = useMemo(() => {
-        if (!startDate || !endDate) {
-            return 0;
-        }
-        const start = parseDate(startDate);
-        const end = parseDate(endDate);
-        if (
-            !Number.isFinite(start.getTime()) ||
-            !Number.isFinite(end.getTime())
-        ) {
-            return 0;
-        }
-        let count = 0;
-        const cursor = new Date(start);
-        while (cursor <= end) {
-            const key = formatDateKey(cursor);
-            if (dailyExpenses[key] !== undefined) {
-                count += 1;
-            }
-            cursor.setDate(cursor.getDate() + 1);
-        }
-        return count;
-    }, [dailyExpenses, startDate, endDate]);
+    const filledDays = useMemo(
+        () => calculateFilledDays(startDate, endDate, dailyExpenses),
+        [dailyExpenses, startDate, endDate],
+    );
     const dailyActualAverage =
         filledDays > 0 ? totalDailyExpenses / filledDays : 0;
     const periodTitle = useMemo(() => {
@@ -974,14 +780,21 @@ export default function Period() {
         }
         return `${days} дней · ${formatMonthRange(startDate, endDate)}`;
     }, [days, startDate, endDate]);
-    const plannedPeriodSum = totalIncome - totalPlannedExpenses;
-    const dailyAverage = days > 0 ? plannedPeriodSum / days : 0;
-    const actualRemaining =
-        plannedPeriodSum + totalDifference - totalDailyExpenses;
-    const remainingDays = Math.max(0, days - filledDays);
-    const remainingDailyAverage =
-        remainingDays > 0 ? actualRemaining / remainingDays : 0;
-    const isDailyComplete = days > 0 && filledDays >= days;
+    const {
+        plannedPeriodSum,
+        dailyAverage,
+        actualRemaining,
+        remainingDays,
+        remainingDailyAverage,
+        isDailyComplete,
+    } = calculatePeriodMetrics({
+        days,
+        totalIncome,
+        totalPlannedExpenses,
+        totalDifference,
+        totalDailyExpenses,
+        filledDays,
+    });
     const isReadOnly = period.isClosed;
 
     const breadcrumbs: BreadcrumbItem[] = [

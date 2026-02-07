@@ -1,21 +1,24 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { delay } from '@/lib/animation';
+import {
+    calculateDaysInclusive,
+    formatDateKey,
+    formatDateShort,
+    formatMonthRange,
+} from '@/lib/date';
+import { formatCurrency, toIntegerValue } from '@/lib/number';
+import {
+    calculateBlockStats,
+    formatDateLabel,
+    generateWeeklyBlocks,
+} from '@/lib/period-calculations';
+import type { PeriodDailyData } from '@/types/period';
 
-const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
-
-type PeriodData = {
-    id: number;
-    startDate: string;
-    endDate: string;
-    dailyExpenses: Record<string, number>;
-    isClosed: boolean;
-};
-
-const emptyPeriod: PeriodData = {
+const emptyPeriod: PeriodDailyData = {
     id: 0,
     startDate: '',
     endDate: '',
@@ -23,114 +26,9 @@ const emptyPeriod: PeriodData = {
     isClosed: false,
 };
 
-const formatCurrency = (value: number) =>
-    `${Math.max(0, Math.round(value)).toLocaleString('ru-RU')} ₽`;
-
-const parseDate = (value: string) => {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, (month ?? 1) - 1, day ?? 1);
-};
-
-const formatDateShort = (value: string) => {
-    const date = parseDate(value);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}.${month}`;
-};
-
-const formatMonthYear = (value: string) =>
-    new Intl.DateTimeFormat('ru-RU', {
-        month: 'long',
-        year: 'numeric',
-    }).format(parseDate(value));
-
-const formatMonthRange = (start: string, end: string) => {
-    const formatter = new Intl.DateTimeFormat('ru-RU', {
-        month: 'short',
-    });
-    const startMonth = formatter.format(parseDate(start));
-    const endMonth = formatter.format(parseDate(end));
-    const startYear = parseDate(start).getFullYear();
-    const endYear = parseDate(end).getFullYear();
-
-    if (startYear === endYear) {
-        if (startMonth === endMonth) {
-            return formatMonthYear(start);
-        }
-        return `${startMonth}–${endMonth} ${startYear}`;
-    }
-
-    return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
-};
-
-const calculateDaysInclusive = (start: string, end: string) => {
-    const startDate = parseDate(start);
-    const endDate = parseDate(end);
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return Math.max(1, diffDays + 1);
-};
-
-const toIntegerValue = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits === '') {
-        return '';
-    }
-    return Number(digits);
-};
-
-const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-};
-
-const formatDateLabel = (date: Date) => {
-    const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const dayIndex = (date.getDay() + 6) % 7;
-    return `${dayNames[dayIndex]}, ${day}.${month}`;
-};
-
-const addDays = (date: Date, days: number) => {
-    const next = new Date(date);
-    next.setDate(next.getDate() + days);
-    return next;
-};
-
-const generateWeeklyBlocks = (start: string, end: string) => {
-    const startDate = parseDate(start);
-    const endDate = parseDate(end);
-    const blocks: Date[][] = [];
-    let cursor = new Date(startDate);
-
-    while (cursor <= endDate) {
-        const block: Date[] = [];
-        const dayOfWeek = cursor.getDay();
-        const daysToSunday = (7 - dayOfWeek) % 7;
-        const remainingDays = Math.floor(
-            (endDate.getTime() - cursor.getTime()) / (1000 * 60 * 60 * 24),
-        );
-        const blockEnd = addDays(cursor, Math.min(daysToSunday, remainingDays));
-
-        let current = new Date(cursor);
-        while (current <= blockEnd) {
-            block.push(new Date(current));
-            current = addDays(current, 1);
-        }
-
-        blocks.push(block);
-        cursor = addDays(blockEnd, 1);
-    }
-
-    return blocks;
-};
-
 export default function PeriodDaily() {
     const { periodId } = usePage<{ periodId: string }>().props;
-    const [period, setPeriod] = useState<PeriodData>(emptyPeriod);
+    const [period, setPeriod] = useState<PeriodDailyData>(emptyPeriod);
     const [dailyExpenses, setDailyExpenses] = useState<Record<string, number>>(
         {},
     );
@@ -149,17 +47,17 @@ export default function PeriodDaily() {
             return null;
         }
         const store = (window as typeof window & {
-            __periodCache?: Record<string, PeriodData>;
+            __periodCache?: Record<string, PeriodDailyData>;
         }).__periodCache;
         return store?.[cacheKey] ?? null;
     };
 
-    const writeCache = (data: PeriodData) => {
+    const writeCache = (data: PeriodDailyData) => {
         if (typeof window === 'undefined') {
             return;
         }
         const win = window as typeof window & {
-            __periodCache?: Record<string, PeriodData>;
+            __periodCache?: Record<string, PeriodDailyData>;
         };
         if (!win.__periodCache) {
             win.__periodCache = {};
@@ -387,21 +285,8 @@ export default function PeriodDaily() {
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-sm:snap-y max-sm:snap-mandatory max-sm:overflow-y-auto max-sm:max-h-[calc(100vh-190px)] max-sm:pb-8 max-sm:pr-1">
                         {weeklyBlocks.map((block, index) => {
                             const isLast = index === weeklyBlocks.length - 1;
-                            const blockTotal = block.reduce(
-                                (sum, date) =>
-                                    sum +
-                                    (dailyExpenses[formatDateKey(date)] || 0),
-                                0,
-                            );
-                            const filledDays = block.filter(
-                                (date) =>
-                                    dailyExpenses[formatDateKey(date)] !==
-                                    undefined,
-                            ).length;
-                            const blockAverage =
-                                filledDays > 0
-                                    ? blockTotal / filledDays
-                                    : 0;
+                            const { total: blockTotal, average: blockAverage } =
+                                calculateBlockStats(block, dailyExpenses);
 
                             return (
                                 <div

@@ -1,5 +1,4 @@
 import { Head, usePage } from '@inertiajs/react';
-import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -7,6 +6,16 @@ import type { BreadcrumbItem, SharedData } from '@/types';
 import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { PeriodList } from '@/components/period-list';
 import { UpdateInfoModal } from '@/components/update-info-modal';
+import { delay } from '@/lib/animation';
+import {
+    addMonthsClamp,
+    calculateDaysInclusive,
+    dateKey,
+    formatDateShort,
+    formatMonthRange,
+    isValidDate,
+} from '@/lib/date';
+import type { DashboardPeriodItem } from '@/types/period';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -15,106 +24,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const delay = (ms: number) => ({ '--delay': `${ms}ms` } as CSSProperties);
-
-type PeriodItem = {
-    id: number;
-    start_date: string;
-    end_date: string;
-    is_pinned?: boolean;
-    is_closed?: boolean;
-    actual_remaining?: number | null;
-};
-
-const normalizeDate = (value: string) => {
-    const trimmed = value?.trim() ?? '';
-    if (!trimmed) {
-        return '';
-    }
-    return trimmed.includes('T') ? trimmed.slice(0, 10) : trimmed;
-};
-
-const parseDate = (value: string) => {
-    const trimmed = normalizeDate(value);
-    if (!trimmed) {
-        return new Date('invalid');
-    }
-    const [year, month, day] = trimmed.split('-').map(Number);
-    return new Date(year, (month ?? 1) - 1, day ?? 1);
-};
-
-const isValidDate = (value: string) => {
-    const date = parseDate(value);
-    return Number.isFinite(date.getTime());
-};
-
-const dateKey = (value: string) => {
-    const trimmed = normalizeDate(value);
-    if (!trimmed) {
-        return NaN;
-    }
-    return Number(trimmed.replaceAll('-', ''));
-};
-
-const formatDateShort = (value: string) => {
-    const date = parseDate(value);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}.${month}`;
-};
-
-    const formatMonthYear = (value: string) =>
-        new Intl.DateTimeFormat('ru-RU', {
-            month: 'long',
-            year: 'numeric',
-        }).format(parseDate(value));
-
-const formatMonthRange = (start: string, end: string) => {
-    const formatter = new Intl.DateTimeFormat('ru-RU', {
-        month: 'short',
-    });
-    const startMonth = formatter.format(parseDate(start));
-    const endMonth = formatter.format(parseDate(end));
-    const startYear = parseDate(start).getFullYear();
-    const endYear = parseDate(end).getFullYear();
-
-    if (startYear === endYear) {
-        if (startMonth === endMonth) {
-            return formatMonthYear(start);
-        }
-        return `${startMonth}–${endMonth} ${startYear}`;
-    }
-
-    return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
-};
-
-const addMonthsClamp = (value: string, months: number) => {
-    if (!value) {
-        return '';
-    }
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) {
-        return '';
-    }
-    const targetMonth = month - 1 + months;
-    const targetYear = year + Math.floor(targetMonth / 12);
-    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
-    const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
-    const nextDay = Math.min(day, lastDay);
-    const nextMonth = String(normalizedMonth + 1).padStart(2, '0');
-    const nextDate = String(nextDay).padStart(2, '0');
-    return `${targetYear}-${nextMonth}-${nextDate}`;
-};
-
-const calculateDaysInclusive = (start: string, end: string) => {
-    const startDate = parseDate(start);
-    const endDate = parseDate(end);
-    const diffMs = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    return Math.max(1, diffDays + 1);
-};
-
-const buildPeriodMeta = (period: PeriodItem) => {
+const buildPeriodMeta = (period: DashboardPeriodItem) => {
     const hasValidDates =
         isValidDate(period.start_date) && isValidDate(period.end_date);
     const days = hasValidDates
@@ -141,11 +51,11 @@ export default function Dashboard() {
     const [endDate, setEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [overlapPeriod, setOverlapPeriod] = useState<PeriodItem | null>(
+    const [overlapPeriod, setOverlapPeriod] = useState<DashboardPeriodItem | null>(
         null,
     );
     const [pendingForce, setPendingForce] = useState(false);
-    const [periods, setPeriods] = useState<PeriodItem[]>([]);
+    const [periods, setPeriods] = useState<DashboardPeriodItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [showUpdateInfo, setShowUpdateInfo] = useState(
@@ -182,7 +92,9 @@ export default function Dashboard() {
             if (!response.ok) {
                 throw new Error('Не удалось загрузить периоды.');
             }
-            const payload = (await response.json()) as { data: PeriodItem[] };
+            const payload = (await response.json()) as {
+                data: DashboardPeriodItem[];
+            };
             setPeriods(payload.data ?? []);
         } catch (err) {
             setLoadError(
@@ -253,7 +165,7 @@ export default function Dashboard() {
 
             if (response.status === 409) {
                 const payload = (await response.json()) as {
-                    overlap?: PeriodItem;
+                    overlap?: DashboardPeriodItem;
                 };
                 if (payload.overlap) {
                     setOverlapPeriod(payload.overlap);
