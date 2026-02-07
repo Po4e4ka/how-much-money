@@ -1,4 +1,4 @@
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 export type AmountItem = {
     amount: number | '';
@@ -91,19 +91,4 @@ export type IncomeBlockProps = {
     onAfterDelete: () => void;
     invalidNameIds: string[];
     readOnly?: boolean;
-};
-
-export type FormulaRowProps = {
-    children: ReactNode;
-    className?: string;
-};
-
-export type FormulaValueProps = {
-    children: ReactNode;
-    className?: string;
-};
-
-export type FormulaOpProps = {
-    children: ReactNode;
-    className?: string;
 };

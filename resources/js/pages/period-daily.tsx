@@ -241,7 +241,7 @@ export default function PeriodDaily() {
     }, [isSaving]);
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs} hideBreadcrumbsOnMobile>
+        <AppLayout>
             <Head title={`Ежедневные траты · ${periodTitle}`} />
             <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />

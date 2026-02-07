@@ -204,9 +204,6 @@ export default function Dashboard() {
 
                 <section className="relative z-10 flex flex-wrap items-end justify-between gap-6">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
-                            Финансовый контур
-                        </p>
                         <h1 className="mt-3 font-display text-3xl">
                             Периоды учета
                         </h1>
