@@ -78,4 +78,5 @@ services:
 networks:
   infra_traefik_net:
     external: true
-  hmm_net: {}
+  hmm_net:
+    internal: false
