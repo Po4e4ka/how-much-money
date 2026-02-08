@@ -73,8 +73,9 @@ services:
     networks:
       - hmm_net
     command:
-      - cron
-      - -f
+      - sh
+      - -c
+      - "printenv > /etc/cron.d/hmm-env && chmod 0644 /etc/cron.d/hmm-env && cron -f"
 
 networks:
   infra_traefik_net:
