@@ -63,6 +63,7 @@ services:
     volumes:
       - ./containers/configs/cron/crontab.txt:/etc/cron.d/hmm-cron:ro
       - ./containers/configs/cron/commands:/var/commands:ro
+      - ./.env:/var/commands/.env:ro
     env_file:
       - '.env'
     environment:

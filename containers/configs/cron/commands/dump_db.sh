@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+ENV_FILE="/var/commands/.env"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
+
 DB_HOST="hmm-db"
 DB_PORT="3306"
 DB_NAME="${MYSQL_DATABASE:-}"
