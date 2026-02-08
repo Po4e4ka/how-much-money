@@ -39,7 +39,7 @@ services:
       args:
         USER_ID: 1000
         GROUP_ID: 1000
-    environment:
+    environment: &database_env
       MYSQL_USER: alex
       MYSQL_PASSWORD: 1
       MYSQL_DATABASE: hmm
@@ -53,8 +53,6 @@ services:
       - ./var/data/percona:/var/lib/mysql
       - ./var/logs/percona:/var/log/mysql
       - /etc/localtime:/etc/localtime:ro
-    env_file:
-      - '.env'
     networks:
       - hmm_net
 
@@ -67,6 +65,8 @@ services:
       - ./containers/configs/cron/commands:/var/commands:ro
     env_file:
       - '.env'
+    environment:
+      <<: *database_env
     depends_on:
       - hmm-db
     networks:
