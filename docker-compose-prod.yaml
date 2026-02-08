@@ -52,9 +52,20 @@ services:
       - ./var/data/percona:/var/lib/mysql
       - ./var/logs/percona:/var/log/mysql
       - /etc/localtime:/etc/localtime:ro
-      - ./containers/configs/db/dump_db.sh:/var/cron/dump_db.sh:+x
     env_file:
       - '.env'
+
+  hmm-cron:
+    container_name: hmm-cron
+    build:
+      dockerfile: containers/prod-cron.Dockerfile
+    volumes:
+      - ./containers/configs/cron/crontab.txt:/etc/cron.d/hmm-cron:ro
+      - ./containers/configs/cron/commands:/var/commands:ro
+    env_file:
+      - '.env'
+    depends_on:
+      - hmm-db
 
 networks:
   infra_traefik_net:

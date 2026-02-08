@@ -1,0 +1,1 @@
+* * * * * root bash /var/commands/dump_db.sh
