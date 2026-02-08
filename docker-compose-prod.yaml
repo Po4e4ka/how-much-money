@@ -63,4 +63,4 @@ networks:
   infra_traefik_net:
     external: true
   hmm_net:
-    internal: true
+    external: true
