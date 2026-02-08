@@ -7,6 +7,7 @@ if [[ -f "$ENV_FILE" ]]; then
   source "$ENV_FILE"
   set +a
 fi
+echo $(env)
 
 DB_HOST="hmm-db"
 DB_PORT="3306"
