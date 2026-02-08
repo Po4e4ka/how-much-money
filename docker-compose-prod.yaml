@@ -53,6 +53,9 @@ services:
       - ./var/data/percona:/var/lib/mysql
       - ./var/logs/percona:/var/log/mysql
       - /etc/localtime:/etc/localtime:ro
+      - ./containers/configs/db/dump_db.sh:/var/cron/dump_db.sh:+x
+    env_file:
+      - '.env'
     networks:
       - hmm_net
 
