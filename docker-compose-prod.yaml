@@ -30,7 +30,6 @@ services:
       - "traefik.http.services.hmm.loadbalancer.server.port=80"
     networks:
       - infra_traefik_net
-      - hmm_net
 
   hmm-db:
     container_name: hmm-db
@@ -56,11 +55,7 @@ services:
       - ./containers/configs/db/dump_db.sh:/var/cron/dump_db.sh:+x
     env_file:
       - '.env'
-    networks:
-      - hmm_net
 
 networks:
   infra_traefik_net:
-    external: true
-  hmm_net:
     external: true
