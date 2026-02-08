@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-DB_HOST="127.0.0.1"
+DB_HOST="hmm-db"
 DB_PORT="3306"
 DB_NAME="${MYSQL_DATABASE:-}"
 DB_USER="${MYSQL_USER:-}"
