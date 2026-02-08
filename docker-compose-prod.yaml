@@ -30,6 +30,7 @@ services:
       - "traefik.http.services.hmm.loadbalancer.server.port=80"
     networks:
       - infra_traefik_net
+      - hmm_net
 
   hmm-db:
     container_name: hmm-db
@@ -54,6 +55,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - '.env'
+    networks:
+      - hmm_net
 
   hmm-cron:
     container_name: hmm-cron
@@ -66,7 +69,13 @@ services:
       - '.env'
     depends_on:
       - hmm-db
+    networks:
+      - hmm_net
+    command:
+      - cron
+      - -f
 
 networks:
   infra_traefik_net:
     external: true
+  hmm_net: {}

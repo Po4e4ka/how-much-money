@@ -1,1 +1,3 @@
-* * * * * root bash /var/commands/dump_db.sh
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+* * * * * root bash /var/commands/dump_db.sh >> /var/log/cron.log 2>&1
