@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENV_FILE="/var/commands/.env"
+ENV_FILE="/var/.env"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   source "$ENV_FILE"
