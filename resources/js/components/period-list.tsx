@@ -10,14 +10,15 @@ type PeriodListItem = {
 
 type PeriodListProps = {
     items: PeriodListItem[];
+    baseHref?: string;
 };
 
-export const PeriodList = ({ items }: PeriodListProps) => (
+export const PeriodList = ({ items, baseHref }: PeriodListProps) => (
     <div className="grid gap-4">
         {items.map((period) => (
             <PeriodCard
                 key={period.id}
-                href={`/periods/${period.id}`}
+                href={`${baseHref ?? '/periods'}/${period.id}`}
                 title={period.title}
                 subtitle={period.subtitle}
                 isClosed={period.isClosed}

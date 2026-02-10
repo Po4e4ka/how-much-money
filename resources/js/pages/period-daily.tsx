@@ -26,8 +26,18 @@ const emptyPeriod: PeriodDailyData = {
     isClosed: false,
 };
 
+type ViewerPageProps = {
+    viewerId?: number;
+    viewerName?: string;
+    viewerEmail?: string;
+    viewerMode?: boolean;
+};
+
 export default function PeriodDaily() {
-    const { periodId } = usePage<{ periodId: string }>().props;
+    const { periodId, viewerId, viewerName, viewerEmail, viewerMode } = usePage<
+        { periodId: string } & ViewerPageProps
+    >().props;
+    const isViewerMode = Boolean(viewerId ?? viewerMode);
     const [period, setPeriod] = useState<PeriodDailyData>(emptyPeriod);
     const [dailyExpenses, setDailyExpenses] = useState<Record<string, number>>(
         {},
@@ -39,7 +49,14 @@ export default function PeriodDaily() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const pendingSaveRef = useRef(false);
 
-    const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
+    const cacheKey = useMemo(
+        () => `period:${viewerId ?? 'self'}:${periodId}`,
+        [periodId, viewerId],
+    );
+    const viewerQuery = useMemo(
+        () => (viewerId ? `viewer_id=${viewerId}` : ''),
+        [viewerId],
+    );
     const hasFetchedRef = useRef(false);
 
     const readCache = () => {
@@ -93,19 +110,22 @@ export default function PeriodDaily() {
         }
         return generateWeeklyBlocks(period.startDate, period.endDate);
     }, [period.startDate, period.endDate]);
+    const isReadOnly = period.isClosed || isViewerMode;
+
+    const basePeriodsHref = viewerId ? `/shared/${viewerId}/periods` : '/periods';
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',
-            href: dashboard().url,
+            href: viewerId ? `/shared/${viewerId}` : dashboard().url,
         },
         {
             title: periodTitle,
-            href: `/periods/${periodId}`,
+            href: `${basePeriodsHref}/${periodId}`,
         },
         {
             title: 'Ежедневные траты',
-            href: `/periods/${periodId}/daily`,
+            href: `${basePeriodsHref}/${periodId}/daily`,
         },
     ];
 
@@ -130,7 +150,9 @@ export default function PeriodDaily() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch(`/api/periods/${periodId}`);
+            const response = await fetch(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+            );
             if (!response.ok) {
                 throw new Error('Не удалось загрузить период.');
             }
@@ -171,7 +193,7 @@ export default function PeriodDaily() {
     };
 
     const handleSave = async () => {
-        if (period.isClosed) {
+        if (isReadOnly) {
             return;
         }
         if (isSaving) {
@@ -187,16 +209,19 @@ export default function PeriodDaily() {
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
-            const response = await fetch(`/api/periods/${periodId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
+            const response = await fetch(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({
+                        daily_expenses: dailyExpenses,
+                    }),
                 },
-                body: JSON.stringify({
-                    daily_expenses: dailyExpenses,
-                }),
-            });
+            );
 
             if (!response.ok) {
                 if (response.status === 423) {
@@ -230,8 +255,9 @@ export default function PeriodDaily() {
     };
 
     useEffect(() => {
+        hasFetchedRef.current = false;
         void fetchPeriod();
-    }, [periodId]);
+    }, [periodId, viewerId]);
 
     useEffect(() => {
         if (!isSaving && pendingSaveRef.current) {
@@ -260,13 +286,27 @@ export default function PeriodDaily() {
                         </p>
                     </div>
                     <Link
-                        href={`/periods/${periodId}`}
+                        href={
+                            viewerId
+                                ? `/shared/${viewerId}/periods/${periodId}`
+                                : `/periods/${periodId}`
+                        }
                         prefetch
                         className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
                     >
                         ← К периоду
                     </Link>
                 </section>
+
+                {isViewerMode && (
+                    <div className="relative z-10 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1c1a17] shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 dark:text-white/80">
+                        Просмотр периодов пользователя{' '}
+                        <span className="font-semibold">
+                            {viewerName || viewerEmail || `#${viewerId}`}
+                        </span>
+                        . Режим только чтение.
+                    </div>
+                )}
 
                 <section
                     className="relative z-10 grid gap-4 animate-reveal"
@@ -321,7 +361,7 @@ export default function PeriodDaily() {
                                                                     ] ?? ''
                                                                 }
                                                                 disabled={
-                                                                    period.isClosed
+                                                                    isReadOnly
                                                                 }
                                                                 onChange={(
                                                                     event,

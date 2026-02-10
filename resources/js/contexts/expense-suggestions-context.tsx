@@ -15,12 +15,14 @@ const ExpenseSuggestionsContext = createContext<ExpenseSuggestionsContextValue |
 type ExpenseSuggestionsProviderProps = {
     periodId: string;
     type: 'income' | 'mandatory' | 'external';
+    viewerId?: number;
     children: ReactNode;
 };
 
 export const ExpenseSuggestionsProvider = ({
     periodId,
     type,
+    viewerId,
     children,
 }: ExpenseSuggestionsProviderProps) => {
     const [suggestions, setSuggestions] = useState<ExpenseSuggestionsState>({
@@ -33,6 +35,9 @@ export const ExpenseSuggestionsProvider = ({
         const fetchSuggestions = async () => {
             try {
                 const params = new URLSearchParams({ type });
+                if (viewerId) {
+                    params.set('viewer_id', viewerId.toString());
+                }
                 const response = await fetch(
                     `/api/periods/${periodId}/expense-suggestions?${params.toString()}`,
                     { signal: controller.signal },
@@ -56,7 +61,7 @@ export const ExpenseSuggestionsProvider = ({
 
         void fetchSuggestions();
         return () => controller.abort();
-    }, [periodId, type]);
+    }, [periodId, type, viewerId]);
 
     const value = useMemo(() => suggestions, [suggestions]);
 

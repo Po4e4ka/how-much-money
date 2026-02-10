@@ -4,16 +4,47 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\Period;
+use App\Models\Viewer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class PeriodController extends Controller
 {
+    private function resolveOwnerId(Request $request, ?Period $period = null): int
+    {
+        $viewerId = $request->query('viewer_id');
+        $userId = $request->user()->id;
+
+        if ($viewerId === null) {
+            if ($period && $period->user_id !== $userId) {
+                abort(403);
+            }
+            return $userId;
+        }
+
+        $viewerId = (int) $viewerId;
+
+        $hasAccess = Viewer::query()
+            ->where('user_id', $viewerId)
+            ->where('viewer_id', $userId)
+            ->where('status', Viewer::STATUS_ACTIVE)
+            ->exists();
+
+        if (! $hasAccess) {
+            abort(403);
+        }
+
+        if ($period && $period->user_id !== $viewerId) {
+            abort(403);
+        }
+
+        return $viewerId;
+    }
     public function index(Request $request)
     {
         $periods = Period::query()
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $this->resolveOwnerId($request))
             ->orderByDesc('start_date')
             ->with([
                 'expenses' => function ($query) {
@@ -55,9 +86,7 @@ class PeriodController extends Controller
 
     public function show(Request $request, Period $period)
     {
-        if ($period->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        $this->resolveOwnerId($request, $period);
 
         $period->load([
             'expenses' => function ($query) {
@@ -117,11 +146,7 @@ class PeriodController extends Controller
 
     public function expenseSuggestions(Request $request, Period $period)
     {
-        if ($period->user_id !== $request->user()->id) {
-            abort(403);
-        }
-
-        $userId = $request->user()->id;
+        $userId = $this->resolveOwnerId($request, $period);
         $type = $request->query('type');
         $allowedTypes = ['income', 'mandatory', 'external'];
         $types = in_array($type, $allowedTypes, true)
@@ -166,6 +191,10 @@ class PeriodController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
         $data = $request->validate([
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
@@ -225,6 +254,10 @@ class PeriodController extends Controller
 
     public function update(Request $request, Period $period)
     {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
         if ($period->user_id !== $request->user()->id) {
             abort(403);
         }
@@ -342,6 +375,10 @@ class PeriodController extends Controller
 
     public function close(Request $request, Period $period)
     {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
         if ($period->user_id !== $request->user()->id) {
             abort(403);
         }
@@ -374,6 +411,10 @@ class PeriodController extends Controller
 
     public function pin(Request $request, Period $period)
     {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
         if ($period->user_id !== $request->user()->id) {
             abort(403);
         }
@@ -433,6 +474,10 @@ class PeriodController extends Controller
 
     public function destroy(Request $request, Period $period)
     {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
         if ($period->user_id !== $request->user()->id) {
             abort(403);
         }

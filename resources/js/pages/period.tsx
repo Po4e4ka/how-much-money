@@ -52,8 +52,18 @@ const emptyPeriod: PeriodData = {
     isClosed: false,
 };
 
+type ViewerPageProps = {
+    viewerId?: number;
+    viewerName?: string;
+    viewerEmail?: string;
+    viewerMode?: boolean;
+};
+
 export default function Period() {
-    const { periodId } = usePage<{ periodId: string }>().props;
+    const { periodId, viewerId, viewerName, viewerEmail, viewerMode } = usePage<
+        { periodId: string } & ViewerPageProps
+    >().props;
+    const isViewerMode = Boolean(viewerId ?? viewerMode);
     const [period, setPeriod] = useState<PeriodData>(emptyPeriod);
     const [incomes, setIncomes] = useState<IncomeItem[]>([]);
     const [startDate, setStartDate] = useState('');
@@ -96,7 +106,14 @@ export default function Period() {
         null,
     );
 
-    const cacheKey = useMemo(() => `period:${periodId}`, [periodId]);
+    const cacheKey = useMemo(
+        () => `period:${viewerId ?? 'self'}:${periodId}`,
+        [periodId, viewerId],
+    );
+    const viewerQuery = useMemo(
+        () => (viewerId ? `viewer_id=${viewerId}` : ''),
+        [viewerId],
+    );
     const hasFetchedRef = useRef(false);
     const fetchInFlightRef = useRef(false);
 
@@ -170,7 +187,7 @@ export default function Period() {
         totalDailyExpenses,
         filledDays,
     });
-    const isReadOnly = period.isClosed;
+    const isReadOnly = period.isClosed || isViewerMode;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -227,7 +244,9 @@ export default function Period() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch(`/api/periods/${periodId}`);
+            const response = await fetch(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+            );
             if (!response.ok) {
                 throw new Error('Не удалось загрузить период.');
             }
@@ -311,7 +330,7 @@ export default function Period() {
         force = false,
         overrides?: { startDate?: string; endDate?: string },
     ) => {
-        if (period.isClosed) {
+        if (isReadOnly) {
             return;
         }
         const nextStartDate = overrides?.startDate ?? startDate;
@@ -336,13 +355,15 @@ export default function Period() {
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
-            const response = await fetch(`/api/periods/${periodId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                },
-                body: JSON.stringify({
+            const response = await fetch(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({
                     start_date: nextStartDate,
                     end_date: nextEndDate,
                     daily_expenses: dailyExpenses,
@@ -375,8 +396,9 @@ export default function Period() {
                             name: item.name,
                             amount: toNumberOrZero(item.amount),
                         })),
-                }),
-            });
+                    }),
+                },
+            );
 
             if (response.status === 409) {
                 const payload = (await response.json()) as {
@@ -443,7 +465,7 @@ export default function Period() {
     };
 
     const handleAddIncome = () => {
-        if (period.isClosed) {
+        if (isReadOnly) {
             return;
         }
         setIncomes((prev) => [
@@ -462,6 +484,9 @@ export default function Period() {
     };
 
     const handleDelete = async () => {
+        if (isViewerMode) {
+            return;
+        }
         if (isDeleting) {
             return;
         }
@@ -475,16 +500,21 @@ export default function Period() {
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
-            const response = await fetch(`/api/periods/${periodId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': token,
+            const response = await fetch(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': token,
+                    },
                 },
-            });
+            );
             if (!response.ok) {
                 throw new Error('Не удалось удалить период.');
             }
-            window.location.href = dashboard().url;
+            window.location.href = viewerId
+                ? `/shared/${viewerId}`
+                : dashboard().url;
         } catch (err) {
             setSaveError(
                 err instanceof Error
@@ -497,7 +527,7 @@ export default function Period() {
     };
 
     const handleClose = async () => {
-        if (isClosing || period.isClosed) {
+        if (isViewerMode || isClosing || period.isClosed) {
             return;
         }
         setIsClosing(true);
@@ -507,12 +537,15 @@ export default function Period() {
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
-            const response = await fetch(`/api/periods/${periodId}/close`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': token,
+            const response = await fetch(
+                `/api/periods/${periodId}/close${viewerQuery ? `?${viewerQuery}` : ''}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': token,
+                    },
                 },
-            });
+            );
 
             if (response.status === 419) {
                 setShowSessionExpired(true);
@@ -560,7 +593,7 @@ export default function Period() {
     };
 
     const handleTogglePin = async (force = false) => {
-        if (isPinning) {
+        if (isViewerMode || isPinning) {
             return;
         }
         setIsPinning(true);
@@ -569,17 +602,20 @@ export default function Period() {
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute('content') ?? '';
-            const response = await fetch(`/api/periods/${periodId}/pin`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
+            const response = await fetch(
+                `/api/periods/${periodId}/pin${viewerQuery ? `?${viewerQuery}` : ''}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({
+                        pinned: !period.isPinned,
+                        force,
+                    }),
                 },
-                body: JSON.stringify({
-                    pinned: !period.isPinned,
-                    force,
-                }),
-            });
+            );
 
             if (response.status === 419) {
                 setShowSessionExpired(true);
@@ -629,7 +665,7 @@ export default function Period() {
     useEffect(() => {
         hasFetchedRef.current = false;
         void fetchPeriod();
-    }, [periodId]);
+    }, [periodId, viewerId]);
 
 
     useEffect(() => {
@@ -684,7 +720,7 @@ export default function Period() {
                         </div>
                     )}
                     <div className="flex flex-wrap items-center gap-2">
-                        {!period.isClosed && (
+                        {!isViewerMode && !period.isClosed && (
                             <PillButton
                                 type="button"
                                 onClick={() => handleTogglePin(false)}
@@ -695,7 +731,7 @@ export default function Period() {
                                 {period.isPinned ? 'Открепить' : 'Закрепить'}
                             </PillButton>
                         )}
-                        {isDailyComplete && !period.isClosed && (
+                        {!isViewerMode && isDailyComplete && !period.isClosed && (
                             <PillButton
                                 type="button"
                                 onClick={() => setShowCloseModal(true)}
@@ -706,17 +742,19 @@ export default function Period() {
                                 Закрыть период
                             </PillButton>
                         )}
-                        <PillButton
-                            type="button"
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            tone="danger"
-                            className="px-4 py-2"
-                        >
-                            Удалить
-                        </PillButton>
+                        {!isViewerMode && (
+                            <PillButton
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                tone="danger"
+                                className="px-4 py-2"
+                            >
+                                Удалить
+                            </PillButton>
+                        )}
                         <Link
-                            href={dashboard()}
+                            href={viewerId ? `/shared/${viewerId}` : dashboard()}
                             prefetch
                             className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
                         >
@@ -724,6 +762,16 @@ export default function Period() {
                         </Link>
                     </div>
                 </section>
+
+                {isViewerMode && (
+                    <div className="relative z-10 rounded-2xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1c1a17] shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 dark:text-white/80">
+                        Просмотр периодов пользователя{' '}
+                        <span className="font-semibold">
+                            {viewerName || viewerEmail || `#${viewerId}`}
+                        </span>
+                        . Режим только чтение.
+                    </div>
+                )}
 
                 <section
                     className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start animate-reveal"
@@ -743,6 +791,7 @@ export default function Period() {
                         <ExpenseSuggestionsProvider
                             periodId={periodId}
                             type="income"
+                            viewerId={viewerId}
                         >
                             <IncomeBlock
                                 items={incomes}
@@ -763,6 +812,7 @@ export default function Period() {
                         <ExpenseSuggestionsProvider
                             periodId={periodId}
                             type="mandatory"
+                            viewerId={viewerId}
                         >
                             <ExpensesBlock
                                 title="Обязательные траты"
@@ -786,6 +836,7 @@ export default function Period() {
                         <ExpenseSuggestionsProvider
                             periodId={periodId}
                             type="external"
+                            viewerId={viewerId}
                         >
                             <OffIncomeBlock
                                 title="Сторонние траты"
@@ -813,7 +864,9 @@ export default function Period() {
                             isEditing={isEditingDates}
                             readOnly={isReadOnly}
                             onToggleEditing={() =>
-                                setIsEditingDates((prev) => !prev)
+                                setIsEditingDates((prev) =>
+                                    isReadOnly ? prev : !prev,
+                                )
                             }
                             onStartDateChange={(nextValue) => {
                                 setStartDate(nextValue);
@@ -838,7 +891,13 @@ export default function Period() {
                                 startDate ? addMonthsClamp(startDate, 3) : undefined
                             }
                         />
-                        <DailyExpensesCard href={`/periods/${periodId}/daily`} />
+                        <DailyExpensesCard
+                            href={
+                                viewerId
+                                    ? `/shared/${viewerId}/periods/${periodId}/daily`
+                                    : `/periods/${periodId}/daily`
+                            }
+                        />
                         <PlannedAverageCard
                             dailyAverage={dailyAverage}
                             days={days}
@@ -884,7 +943,7 @@ export default function Period() {
                     />
                 )}
 
-                {overlapPeriod && (
+                {!isViewerMode && overlapPeriod && (
                     <OverlapPeriodModal
                         href={`/periods/${overlapPeriod.id}`}
                         title={`${formatDateShort(

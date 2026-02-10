@@ -46,8 +46,18 @@ const buildPeriodMeta = (period: DashboardPeriodItem) => {
     };
 };
 
+type ViewerPageProps = {
+    viewerId?: number;
+    viewerName?: string;
+    viewerEmail?: string;
+    viewerMode?: boolean;
+};
+
 export default function Dashboard() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, viewerId, viewerName, viewerEmail, viewerMode } = usePage<
+        SharedData & ViewerPageProps
+    >().props;
+    const isViewerMode = Boolean(viewerId ?? viewerMode);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +106,8 @@ export default function Dashboard() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch('/api/periods');
+            const params = viewerId ? `?viewer_id=${viewerId}` : '';
+            const response = await fetch(`/api/periods${params}`);
             if (!response.ok) {
                 throw new Error('Не удалось загрузить периоды.');
             }
@@ -120,6 +131,10 @@ export default function Dashboard() {
     }, []);
 
     const handleCreatePeriod = async (force = false) => {
+        if (isViewerMode) {
+            return;
+        }
+
         if (!startDate || !endDate) {
             setError('Укажите даты начала и конца периода.');
             return;
@@ -221,70 +236,91 @@ export default function Dashboard() {
                             Периоды учета
                         </h1>
                         <p className="mt-2 max-w-xl text-sm text-[#6a5d52] dark:text-white/70">
-                            Добавьте новый период сверху и управляйте историей ниже.
-                            При клике откроется отдельная страница периода.
+                            {isViewerMode
+                                ? 'Режим просмотра. Создание и редактирование недоступны.'
+                                : 'Добавьте новый период сверху и управляйте историей ниже. При клике откроется отдельная страница периода.'}
                         </p>
                     </div>
                 </section>
 
-                <section
-                    className="relative z-10 rounded-[28px] border border-black/10 bg-white/85 p-6 shadow-[0_22px_44px_-28px_rgba(28,26,23,0.6)] backdrop-blur animate-reveal dark:border-white/10 dark:bg-white/10"
-                    style={delay(120)}
-                >
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
-                                Новый период
+                {isViewerMode && (
+                    <div className="relative z-10 rounded-[24px] border border-black/10 bg-white/70 px-5 py-3 text-sm text-[#1c1a17] shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 dark:text-white/80">
+                        Просмотр периодов пользователя{' '}
+                        <span className="font-semibold">
+                            {viewerName || viewerEmail || `#${viewerId}`}
+                        </span>
+                        .
+                    </div>
+                )}
+
+                {!isViewerMode && (
+                    <section
+                        className="relative z-10 rounded-[28px] border border-black/10 bg-white/85 p-6 shadow-[0_22px_44px_-28px_rgba(28,26,23,0.6)] backdrop-blur animate-reveal dark:border-white/10 dark:bg-white/10"
+                        style={delay(120)}
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                                    Новый период
+                                </p>
+                                <h2 className="mt-2 font-display text-2xl">
+                                    Добавить диапазон дат
+                                </h2>
+                            </div>
+                        </div>
+                        <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_1fr]">
+                            <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                                <span>С</span>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(event) =>
+                                        setStartDate(event.target.value)
+                                    }
+                                    min={
+                                        endDate
+                                            ? addMonthsClamp(endDate, -3)
+                                            : undefined
+                                    }
+                                    max={endDate || undefined}
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                />
+                            </label>
+                            <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
+                                <span>По</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(event) =>
+                                        setEndDate(event.target.value)
+                                    }
+                                    min={startDate || undefined}
+                                    max={
+                                        startDate
+                                            ? addMonthsClamp(startDate, 3)
+                                            : undefined
+                                    }
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                />
+                            </label>
+                            <div className="flex flex-col justify-end">
+                                <button
+                                    className="rounded-2xl bg-[#d87a4a] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(216,122,74,0.8)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                                    type="button"
+                                    onClick={() => handleCreatePeriod(false)}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'Сохранение...' : 'Сохранить'}
+                                </button>
+                            </div>
+                        </div>
+                        {error && (
+                            <p className="mt-3 text-xs text-[#b0352b] dark:text-[#ff8b7c]">
+                                {error}
                             </p>
-                            <h2 className="mt-2 font-display text-2xl">
-                                Добавить диапазон дат
-                            </h2>
-                        </div>
-                    </div>
-                    <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_1fr]">
-                        <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
-                            <span>С</span>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(event) =>
-                                    setStartDate(event.target.value)
-                                }
-                                min={endDate ? addMonthsClamp(endDate, -3) : undefined}
-                                max={endDate || undefined}
-                                className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
-                            />
-                        </label>
-                        <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
-                            <span>По</span>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(event) =>
-                                    setEndDate(event.target.value)
-                                }
-                                min={startDate || undefined}
-                                max={startDate ? addMonthsClamp(startDate, 3) : undefined}
-                                className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
-                            />
-                        </label>
-                        <div className="flex flex-col justify-end">
-                            <button
-                                className="rounded-2xl bg-[#d87a4a] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(216,122,74,0.8)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-                                type="button"
-                                onClick={() => handleCreatePeriod(false)}
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Сохранение...' : 'Сохранить'}
-                            </button>
-                        </div>
-                    </div>
-                    {error && (
-                        <p className="mt-3 text-xs text-[#b0352b] dark:text-[#ff8b7c]">
-                            {error}
-                        </p>
-                    )}
-                </section>
+                        )}
+                    </section>
+                )}
 
                 <section
                     className="relative z-10 grid gap-4 animate-reveal"
@@ -319,6 +355,11 @@ export default function Dashboard() {
                                                         null,
                                                 },
                                             ]}
+                                            baseHref={
+                                                viewerId
+                                                    ? `/shared/${viewerId}/periods`
+                                                    : undefined
+                                            }
                                         />
                                     );
                                 })()}
@@ -360,12 +401,17 @@ export default function Dashboard() {
                                             period.actual_remaining ?? null,
                                     };
                                 })}
+                                baseHref={
+                                    viewerId
+                                        ? `/shared/${viewerId}/periods`
+                                        : undefined
+                                }
                             />
                         )}
                     </div>
                 </section>
 
-                {overlapPeriod && (
+                {!isViewerMode && overlapPeriod && (
                     <OverlapPeriodModal
                         href={`/periods/${overlapPeriod.id}`}
                         title={
