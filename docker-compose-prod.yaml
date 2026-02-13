@@ -61,13 +61,15 @@ services:
     build:
       dockerfile: containers/prod-cron.Dockerfile
     volumes:
-      - ./containers/configs/cron/crontab.txt:/etc/cron.d/hmm-cron:ro
+      - ./containers/configs/cron/crontab.txt:/tmp/hmm-cron-src:ro
       - ./containers/configs/cron/commands:/var/commands:ro
       - ./.env:/var/.env:ro
+      - /etc/localtime:/etc/localtime:ro
     env_file:
       - '.env'
     environment:
       <<: *database_env
+      TZ: ${TZ:-UTC}
     depends_on:
       - hmm-db
     networks:
@@ -75,7 +77,7 @@ services:
     command:
       - sh
       - -c
-      - "printenv > /etc/cron.d/hmm-env && chmod 0644 /etc/cron.d/hmm-env && cron -f"
+      - "cp /tmp/hmm-cron-src /etc/cron.d/hmm-cron && chown root:root /etc/cron.d/hmm-cron && chmod 0644 /etc/cron.d/hmm-cron && cron -f"
 
 networks:
   infra_traefik_net:
