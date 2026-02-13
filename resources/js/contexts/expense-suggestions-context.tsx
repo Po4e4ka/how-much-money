@@ -14,7 +14,7 @@ const ExpenseSuggestionsContext = createContext<ExpenseSuggestionsContextValue |
 
 type ExpenseSuggestionsProviderProps = {
     periodId: string;
-    type: 'income' | 'mandatory' | 'external';
+    type: 'income' | 'mandatory' | 'external' | 'unforeseen';
     viewerId?: number;
     children: ReactNode;
 };

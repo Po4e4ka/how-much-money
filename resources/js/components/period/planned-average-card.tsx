@@ -9,6 +9,7 @@ type PlannedAverageCardProps = {
     days: number;
     totalIncome: number;
     totalPlannedExpenses: number;
+    totalUnforeseenAllocated: number;
     plannedPeriodSum: number;
 };
 
@@ -17,11 +18,12 @@ export const PlannedAverageCard = ({
     days,
     totalIncome,
     totalPlannedExpenses,
+    totalUnforeseenAllocated,
     plannedPeriodSum,
 }: PlannedAverageCardProps) => (
     <div className="rounded-lg border border-black/10 bg-white/85 px-5 py-6 text-[#1c1a17] shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-[#1c1a17] dark:text-white dark:shadow-[0_20px_40px_-26px_rgba(0,0,0,0.7)]">
         <div className="grid gap-3 text-xs text-[#6a5d52] dark:text-white/70">
-            <BlockTitle tooltipText="Приход − план = сумма в период">
+            <BlockTitle tooltipText="Приход − план обязательных − выделено на непредвиденные = сумма в период">
                 Планируемая сумма на период
             </BlockTitle>
             <FormulaRow>
@@ -31,6 +33,10 @@ export const PlannedAverageCard = ({
                 <FormulaOp>−</FormulaOp>
                 <FormulaValue className="text-[#b0352b] dark:text-[#ff8b7c]">
                     {formatCurrency(totalPlannedExpenses)}
+                </FormulaValue>
+                <FormulaOp>−</FormulaOp>
+                <FormulaValue className="text-[#b0352b] dark:text-[#ff8b7c]">
+                    {formatCurrency(totalUnforeseenAllocated)}
                 </FormulaValue>
                 <FormulaOp>=</FormulaOp>
                 <FormulaValue

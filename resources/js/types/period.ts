@@ -27,6 +27,8 @@ export type PeriodData = {
     endDate: string;
     incomes: IncomeItem[];
     expenses: ExpenseItem[];
+    unforeseenExpenses: ExpenseItem[];
+    unforeseenAllocated: number;
     offIncomeExpenses: OffIncomeItem[];
     dailyExpenses: Record<string, number>;
     isPinned: boolean;

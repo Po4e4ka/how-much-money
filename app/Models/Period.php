@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $start_date
  * @property Carbon|null $end_date
  * @property array|null $daily_expenses
+ * @property int $unforeseen_allocated
  * @property bool $is_pinned
  * @property bool $is_closed
  * @property Carbon|null $created_at
@@ -32,6 +33,7 @@ class Period extends Model
         'start_date',
         'end_date',
         'daily_expenses',
+        'unforeseen_allocated',
         'is_pinned',
         'is_closed',
     ];
@@ -40,6 +42,7 @@ class Period extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'daily_expenses' => 'array',
+        'unforeseen_allocated' => 'integer',
         'is_pinned' => 'boolean',
         'is_closed' => 'boolean',
     ];

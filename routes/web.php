@@ -86,6 +86,26 @@ Route::get('shared/{user}/periods/{period}/daily', function (\Illuminate\Http\Re
     ]);
 })->middleware(['auth', 'verified'])->name('shared.periods.daily');
 
+Route::get('shared/{user}/periods/{period}/unforeseen', function (\Illuminate\Http\Request $request, User $user, string $period) {
+    $hasAccess = Viewer::query()
+        ->where('user_id', $user->id)
+        ->where('viewer_id', $request->user()->id)
+        ->where('status', Viewer::STATUS_ACTIVE)
+        ->exists();
+
+    if (!$hasAccess) {
+        abort(403);
+    }
+
+    return Inertia::render('period-unforeseen', [
+        'periodId' => $period,
+        'viewerId' => $user->id,
+        'viewerName' => $user->name,
+        'viewerEmail' => $user->email,
+        'viewerMode' => true,
+    ]);
+})->middleware(['auth', 'verified'])->name('shared.periods.unforeseen');
+
 Route::get('periods/{period}', function (string $period) {
     return Inertia::render('period', [
         'periodId' => $period,
@@ -97,6 +117,12 @@ Route::get('periods/{period}/daily', function (string $period) {
         'periodId' => $period,
     ]);
 })->middleware(['auth', 'verified'])->name('periods.daily');
+
+Route::get('periods/{period}/unforeseen', function (string $period) {
+    return Inertia::render('period-unforeseen', [
+        'periodId' => $period,
+    ]);
+})->middleware(['auth', 'verified'])->name('periods.unforeseen');
 
 Route::middleware(['auth', 'verified', 'api'])
     ->prefix('api')

@@ -17,15 +17,15 @@ export const OffIncomeBlock = ({
     onAfterDelete,
     readOnly = false,
 }: OffIncomeBlockProps) => (
-        <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-            <div className="flex items-center justify-between">
+        <div className="w-full min-w-0 overflow-hidden rounded-lg border border-black/10 bg-white/80 px-4 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10 sm:px-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
                 <BlockTitle
                     tooltipText="Эти траты не учитываются в расчётах."
                     tooltipAriaLabel="Сторонние траты"
                 >
                     {title}
                 </BlockTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                     <PillButton
                         type="button"
                         onClick={() =>
@@ -74,29 +74,31 @@ export const OffIncomeBlock = ({
                         key={item.id}
                         className={`grid items-center gap-2 ${
                             showDelete
-                                ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
-                                : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
+                                ? 'grid-cols-[minmax(0,1fr)_minmax(92px,0.55fr)_auto]'
+                                : 'grid-cols-[minmax(0,1fr)_minmax(92px,0.55fr)]'
                         }`}
                     >
-                        <ExpenseNameInput
-                            value={item.name}
-                            placeholder={`Трата ${index + 1}`}
-                            disabled={readOnly}
-                            usedNames={usedNames}
-                            onChange={(nextValue) =>
-                                setItems((prev) =>
-                                    prev.map((expense) =>
-                                        expense.id === item.id
-                                            ? {
-                                                  ...expense,
-                                                  name: nextValue,
-                                              }
-                                            : expense,
-                                    ),
-                                )
-                            }
-                            onBlur={onBlurField}
-                        />
+                        <div className="min-w-0">
+                            <ExpenseNameInput
+                                value={item.name}
+                                placeholder={`Трата ${index + 1}`}
+                                disabled={readOnly}
+                                usedNames={usedNames}
+                                onChange={(nextValue) =>
+                                    setItems((prev) =>
+                                        prev.map((expense) =>
+                                            expense.id === item.id
+                                                ? {
+                                                      ...expense,
+                                                      name: nextValue,
+                                                  }
+                                                : expense,
+                                        ),
+                                    )
+                                }
+                                onBlur={onBlurField}
+                            />
+                        </div>
                             <input
                         type="number"
                         min={0}
@@ -140,7 +142,7 @@ export const OffIncomeBlock = ({
                             }
                             onBlurField();
                         }}
-                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c] sm:px-4 sm:text-sm"
+                        className="no-spin w-full rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums text-[#b0352b] dark:border-white/10 dark:bg-white/10 dark:text-[#ff8b7c] sm:px-4 sm:text-sm"
                     />
                     {showDelete && (
                         <button
@@ -169,8 +171,8 @@ export const OffIncomeBlock = ({
             <div
                 className={`mt-3 grid items-center gap-2 rounded-lg border border-dashed border-black/10 bg-white/70 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 ${
                     showDelete
-                        ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
-                        : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
+                        ? 'grid-cols-[minmax(0,1fr)_minmax(92px,0.55fr)_auto]'
+                        : 'grid-cols-[minmax(0,1fr)_minmax(92px,0.55fr)]'
                 }`}
             >
                 <span>{totalLabel}</span>

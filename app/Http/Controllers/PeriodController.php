@@ -129,17 +129,31 @@ class PeriodController extends Controller
             })
             ->values();
 
+        $unforeseenExpenses = $period->expenses
+            ->where('type', 'unforeseen')
+            ->map(function ($expense) {
+                return [
+                    'id' => $expense->id,
+                    'name' => $expense->name,
+                    'planned_amount' => $expense->pivot->planned_amount,
+                    'actual_amount' => $expense->pivot->actual_amount,
+                ];
+            })
+            ->values();
+
         return response()->json([
             'data' => [
                 'id' => $period->id,
                 'start_date' => $period->start_date->toDateString(),
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
+                'unforeseen_allocated' => (int) ($period->unforeseen_allocated ?? 0),
                 'is_pinned' => (bool) $period->is_pinned,
                 'is_closed' => (bool) $period->is_closed,
                 'incomes' => $incomes,
                 'expenses' => $mandatoryExpenses,
                 'external_expenses' => $externalExpenses,
+                'unforeseen_expenses' => $unforeseenExpenses,
             ],
         ]);
     }
@@ -148,7 +162,7 @@ class PeriodController extends Controller
     {
         $userId = $this->resolveOwnerId($request, $period);
         $type = $request->query('type');
-        $allowedTypes = ['income', 'mandatory', 'external'];
+        $allowedTypes = ['income', 'mandatory', 'external', 'unforeseen'];
         $types = in_array($type, $allowedTypes, true)
             ? [$type]
             : ['mandatory', 'external'];
@@ -199,6 +213,7 @@ class PeriodController extends Controller
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'daily_expenses' => ['nullable', 'array'],
+            'unforeseen_allocated' => ['nullable', 'integer', 'min:0'],
             'force' => ['nullable', 'boolean'],
         ]);
 
@@ -238,6 +253,7 @@ class PeriodController extends Controller
             'start_date' => $startDate,
             'end_date' => $endDate,
             'daily_expenses' => $data['daily_expenses'] ?? [],
+            'unforeseen_allocated' => (int) ($data['unforeseen_allocated'] ?? 0),
         ]);
 
         return response()->json([
@@ -246,6 +262,7 @@ class PeriodController extends Controller
                 'start_date' => $period->start_date->toDateString(),
                 'end_date' => $period->end_date->toDateString(),
                 'daily_expenses' => $period->daily_expenses ?? [],
+                'unforeseen_allocated' => (int) ($period->unforeseen_allocated ?? 0),
                 'is_pinned' => (bool) $period->is_pinned,
                 'is_closed' => (bool) $period->is_closed,
             ],
@@ -272,6 +289,7 @@ class PeriodController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'daily_expenses' => ['nullable', 'array'],
+            'unforeseen_allocated' => ['nullable', 'integer', 'min:0'],
             'force' => ['nullable', 'boolean'],
             'incomes' => ['nullable', 'array'],
             'incomes.*.id' => ['nullable', 'integer'],
@@ -286,6 +304,11 @@ class PeriodController extends Controller
             'external_expenses.*.id' => ['nullable', 'integer'],
             'external_expenses.*.name' => ['required_with:external_expenses', 'string', 'max:255'],
             'external_expenses.*.amount' => ['required_with:external_expenses', 'integer', 'min:0'],
+            'unforeseen_expenses' => ['nullable', 'array'],
+            'unforeseen_expenses.*.id' => ['nullable', 'integer'],
+            'unforeseen_expenses.*.name' => ['required_with:unforeseen_expenses', 'string', 'max:255'],
+            'unforeseen_expenses.*.planned_amount' => ['required_with:unforeseen_expenses', 'integer', 'min:0'],
+            'unforeseen_expenses.*.actual_amount' => ['required_with:unforeseen_expenses', 'integer', 'min:0'],
         ]);
 
         $force = (bool)($data['force'] ?? false);
@@ -331,6 +354,9 @@ class PeriodController extends Controller
         if (array_key_exists('daily_expenses', $data)) {
             $period->daily_expenses = $data['daily_expenses'] ?? [];
         }
+        if (array_key_exists('unforeseen_allocated', $data)) {
+            $period->unforeseen_allocated = (int) ($data['unforeseen_allocated'] ?? 0);
+        }
 
         $period->save();
 
@@ -366,6 +392,18 @@ class PeriodController extends Controller
                 fn ($item) => [
                     'planned_amount' => 0,
                     'actual_amount' => $item['amount'],
+                ],
+            );
+        }
+
+        if (array_key_exists('unforeseen_expenses', $data)) {
+            $this->syncExpensesByType(
+                $period,
+                $data['unforeseen_expenses'] ?? [],
+                'unforeseen',
+                fn ($item) => [
+                    'planned_amount' => $item['planned_amount'],
+                    'actual_amount' => $item['actual_amount'],
                 ],
             );
         }
@@ -562,7 +600,7 @@ class PeriodController extends Controller
         $period->loadMissing([
             'expenses' => function ($query) {
                 $query->select('expenses.id', 'expenses.type')
-                    ->withPivot(['actual_amount']);
+                    ->withPivot(['planned_amount', 'actual_amount']);
             },
         ]);
 
@@ -576,6 +614,19 @@ class PeriodController extends Controller
             ->where('type', 'mandatory')
             ->sum(fn ($expense) => (int) $expense->pivot->actual_amount);
 
-        return (int) ($incomeTotal - $mandatoryActual - $dailyTotal);
+        $unforeseenActual = $period->expenses
+            ->where('type', 'unforeseen')
+            ->sum(fn ($expense) => (int) $expense->pivot->actual_amount);
+
+        $unforeseenAllocated = (int) ($period->unforeseen_allocated ?? 0);
+        $unforeseenOverrun = max(0, $unforeseenActual - $unforeseenAllocated);
+
+        return (int) (
+            $incomeTotal
+            - $mandatoryActual
+            - $unforeseenAllocated
+            - $unforeseenOverrun
+            - $dailyTotal
+        );
     }
 }

@@ -59,6 +59,8 @@ export const calculatePeriodMetrics = (params: {
     totalIncome: number;
     totalPlannedExpenses: number;
     totalDifference: number;
+    totalUnforeseenAllocated: number;
+    totalUnforeseenSpent: number;
     totalDailyExpenses: number;
     filledDays: number;
 }) => {
@@ -67,13 +69,23 @@ export const calculatePeriodMetrics = (params: {
         totalIncome,
         totalPlannedExpenses,
         totalDifference,
+        totalUnforeseenAllocated,
+        totalUnforeseenSpent,
         totalDailyExpenses,
         filledDays,
     } = params;
-    const plannedPeriodSum = totalIncome - totalPlannedExpenses;
+    const unforeseenOverrun = Math.max(
+        0,
+        totalUnforeseenSpent - totalUnforeseenAllocated,
+    );
+    const plannedPeriodSum =
+        totalIncome - totalPlannedExpenses - totalUnforeseenAllocated;
     const dailyAverage = days > 0 ? plannedPeriodSum / days : 0;
     const actualRemaining =
-        plannedPeriodSum + totalDifference - totalDailyExpenses;
+        plannedPeriodSum +
+        totalDifference -
+        totalDailyExpenses -
+        unforeseenOverrun;
     const remainingDays = Math.max(0, days - filledDays);
     const remainingDailyAverage =
         remainingDays > 0 ? actualRemaining / remainingDays : 0;
@@ -83,6 +95,7 @@ export const calculatePeriodMetrics = (params: {
         plannedPeriodSum,
         dailyAverage,
         actualRemaining,
+        unforeseenOverrun,
         remainingDays,
         remainingDailyAverage,
         isDailyComplete,

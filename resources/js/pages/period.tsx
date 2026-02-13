@@ -16,6 +16,7 @@ import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PlannedAverageCard } from '@/components/period/planned-average-card';
 import { RemainingDailyCard } from '@/components/period/remaining-daily-card';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
+import { UnforeseenExpensesCard } from '@/components/unforeseen-expenses-card';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
 import { delay } from '@/lib/animation';
 import {
@@ -46,6 +47,8 @@ const emptyPeriod: PeriodData = {
     endDate: '',
     incomes: [],
     expenses: [],
+    unforeseenExpenses: [],
+    unforeseenAllocated: 0,
     offIncomeExpenses: [],
     dailyExpenses: {},
     isPinned: false,
@@ -69,6 +72,10 @@ export default function Period() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+    const [unforeseenExpenses, setUnforeseenExpenses] = useState<ExpenseItem[]>(
+        [],
+    );
+    const [unforeseenAllocated, setUnforeseenAllocated] = useState(0);
     const [offIncomeExpenses, setOffIncomeExpenses] = useState<
         OffIncomeItem[]
     >([]);
@@ -142,6 +149,13 @@ export default function Period() {
 
     const { totalPlanned: totalPlannedExpenses, totalActual: totalActualExpenses, totalDifference } =
         calculateExpenseTotals(expenses ?? []);
+    const { totalActual: totalUnforeseenSpent } = calculateExpenseTotals(
+        unforeseenExpenses ?? [],
+    );
+    const unforeseenRemaining = Math.max(
+        0,
+        unforeseenAllocated - totalUnforeseenSpent,
+    );
     const totalOffIncome = calculateAmountTotal(offIncomeExpenses ?? []);
     const totalIncome = calculateAmountTotal(incomes ?? []);
     const days = useMemo(() => {
@@ -176,6 +190,7 @@ export default function Period() {
         plannedPeriodSum,
         dailyAverage,
         actualRemaining,
+        unforeseenOverrun,
         remainingDays,
         remainingDailyAverage,
         isDailyComplete,
@@ -184,6 +199,8 @@ export default function Period() {
         totalIncome,
         totalPlannedExpenses,
         totalDifference,
+        totalUnforeseenAllocated: unforeseenAllocated,
+        totalUnforeseenSpent,
         totalDailyExpenses,
         filledDays,
     });
@@ -200,12 +217,14 @@ export default function Period() {
         },
     ];
 
-    const hasFullCache = (cached: PeriodData | null) =>
+    const hasFullCache = (cached: PeriodData | null): cached is PeriodData =>
         Boolean(
             cached &&
                 cached.id &&
                 Array.isArray(cached.incomes) &&
                 Array.isArray(cached.expenses) &&
+                Array.isArray(cached.unforeseenExpenses) &&
+                typeof cached.unforeseenAllocated === 'number' &&
                 Array.isArray(cached.offIncomeExpenses),
         );
 
@@ -224,6 +243,8 @@ export default function Period() {
             setStartDate(cached.startDate ?? '');
             setEndDate(cached.endDate ?? '');
             setExpenses(cached.expenses ?? []);
+            setUnforeseenExpenses(cached.unforeseenExpenses ?? []);
+            setUnforeseenAllocated(cached.unforeseenAllocated ?? 0);
             setOffIncomeExpenses(cached.offIncomeExpenses ?? []);
             setDailyExpenses(cached.dailyExpenses ?? {});
             lastSavedDatesRef.current = {
@@ -256,10 +277,17 @@ export default function Period() {
                     start_date: string;
                     end_date: string;
                     daily_expenses: Record<string, number>;
+                    unforeseen_allocated: number;
                     is_pinned?: boolean;
                     is_closed?: boolean;
                     incomes: { id: number; name: string; amount: number }[];
                     expenses: {
+                        id: number;
+                        name: string;
+                        planned_amount: number;
+                        actual_amount: number;
+                    }[];
+                    unforeseen_expenses: {
                         id: number;
                         name: string;
                         planned_amount: number;
@@ -278,6 +306,7 @@ export default function Period() {
                 startDate: data.start_date,
                 endDate: data.end_date,
                 dailyExpenses: data.daily_expenses ?? {},
+                unforeseenAllocated: Number(data.unforeseen_allocated ?? 0),
                 isPinned: Boolean(data.is_pinned),
                 isClosed: Boolean(data.is_closed),
                 incomes: data.incomes.map((item) => ({
@@ -286,6 +315,13 @@ export default function Period() {
                     amount: item.amount,
                 })),
                 expenses: data.expenses.map((item) => ({
+                    id: String(item.id),
+                    name: item.name,
+                    plannedAmount: item.planned_amount,
+                    actualAmount: item.actual_amount,
+                    actualTouched: false,
+                })),
+                unforeseenExpenses: data.unforeseen_expenses.map((item) => ({
                     id: String(item.id),
                     name: item.name,
                     plannedAmount: item.planned_amount,
@@ -304,6 +340,8 @@ export default function Period() {
             setStartDate(normalized.startDate);
             setEndDate(normalized.endDate);
             setExpenses(normalized.expenses);
+            setUnforeseenExpenses(normalized.unforeseenExpenses);
+            setUnforeseenAllocated(normalized.unforeseenAllocated);
             setOffIncomeExpenses(normalized.offIncomeExpenses);
             setDailyExpenses(normalized.dailyExpenses);
             setShowPinModal(false);
@@ -367,6 +405,7 @@ export default function Period() {
                     start_date: nextStartDate,
                     end_date: nextEndDate,
                     daily_expenses: dailyExpenses,
+                    unforeseen_allocated: unforeseenAllocated,
                     force,
                     incomes: incomes
                         .filter((item) => item.name.trim() !== '')
@@ -378,6 +417,16 @@ export default function Period() {
                             amount: toNumberOrZero(item.amount),
                         })),
                     expenses: expenses
+                        .filter((item) => item.name.trim() !== '')
+                        .map((item) => ({
+                            id: Number.isFinite(Number(item.id))
+                                ? Number(item.id)
+                                : undefined,
+                            name: item.name,
+                            planned_amount: toNumberOrZero(item.plannedAmount),
+                            actual_amount: toNumberOrZero(item.actualAmount),
+                        })),
+                    unforeseen_expenses: unforeseenExpenses
                         .filter((item) => item.name.trim() !== '')
                         .map((item) => ({
                             id: Number.isFinite(Number(item.id))
@@ -448,6 +497,8 @@ export default function Period() {
                 endDate: nextEndDate,
                 incomes,
                 expenses,
+                unforeseenExpenses,
+                unforeseenAllocated,
                 offIncomeExpenses,
                 dailyExpenses,
                 isPinned: period.isPinned,
@@ -576,6 +627,8 @@ export default function Period() {
                 endDate,
                 incomes,
                 expenses,
+                unforeseenExpenses,
+                unforeseenAllocated,
                 offIncomeExpenses,
                 dailyExpenses,
                 isPinned: period.isPinned,
@@ -832,6 +885,15 @@ export default function Period() {
                                 readOnly={isReadOnly}
                             />
                         </ExpenseSuggestionsProvider>
+                        <UnforeseenExpensesCard
+                            href={
+                                viewerId
+                                    ? `/shared/${viewerId}/periods/${periodId}/unforeseen`
+                                    : `/periods/${periodId}/unforeseen`
+                            }
+                            allocated={unforeseenAllocated}
+                            spent={totalUnforeseenSpent}
+                        />
 
                         <ExpenseSuggestionsProvider
                             periodId={periodId}
@@ -903,6 +965,7 @@ export default function Period() {
                             days={days}
                             totalIncome={totalIncome}
                             totalPlannedExpenses={totalPlannedExpenses}
+                            totalUnforeseenAllocated={unforeseenAllocated}
                             plannedPeriodSum={plannedPeriodSum}
                         />
                         <RemainingDailyCard
@@ -914,6 +977,9 @@ export default function Period() {
                             plannedPeriodSum={plannedPeriodSum}
                             totalDifference={totalDifference}
                             totalDailyExpenses={totalDailyExpenses}
+                            unforeseenOverrun={unforeseenOverrun}
+                            actualRemaining={actualRemaining}
+                            unforeseenRemaining={unforeseenRemaining}
                             dailyActualAverage={dailyActualAverage}
                         />
                     </div>
