@@ -35,7 +35,13 @@ export default function Welcome({
             </Head>
 
             <div className="relative min-h-screen overflow-hidden bg-[#0b0f14] font-body text-[#e9eef3]">
-                <div className="pointer-events-none absolute inset-0 bg-aurora-night opacity-90" />
+                <div
+                    className="pointer-events-none absolute inset-0 opacity-90"
+                    style={{
+                        backgroundImage:
+                            'radial-gradient(55% 70% at 12% 12%, rgba(184,162,255,0.28), transparent 60%), radial-gradient(50% 65% at 72% 82%, rgba(184,162,255,0.18), transparent 62%), radial-gradient(45% 60% at 88% 20%, rgba(184,162,255,0.12), transparent 58%)',
+                    }}
+                />
                 <div className="pointer-events-none absolute inset-0 bg-grid-night opacity-35" />
 
                 <div className="relative grid min-h-screen w-full lg:grid-cols-[minmax(0,1fr)_700px]">

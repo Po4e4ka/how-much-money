@@ -55,7 +55,7 @@ export const OverlapPeriodModal = ({
                 <PillButton
                     type="button"
                     onClick={onConfirm}
-                    className="border-transparent bg-[#d87a4a] px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_28px_-18px_rgba(216,122,74,0.8)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="border-transparent bg-[#4e3f7f] px-4 py-2 text-xs font-semibold text-white shadow-[0_14px_28px_-18px_rgba(78,63,127,0.85)] transition hover:bg-[#66529f] disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={confirmDisabled}
                 >
                     Подтвердить

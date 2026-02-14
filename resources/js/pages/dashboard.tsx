@@ -283,7 +283,7 @@ export default function Dashboard() {
                             </label>
                             <div className="flex flex-col justify-end">
                                 <button
-                                    className="rounded-2xl bg-[#d87a4a] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(216,122,74,0.8)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                                    className="rounded-2xl bg-[#4e3f7f] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(78,63,127,0.85)] transition hover:-translate-y-0.5 hover:bg-[#66529f] disabled:cursor-not-allowed disabled:opacity-70"
                                     type="button"
                                     onClick={() => handleCreatePeriod(false)}
                                     disabled={isSaving}

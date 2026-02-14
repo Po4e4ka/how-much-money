@@ -36,7 +36,7 @@ export const UnforeseenExpensesCard = ({
                 <div className="uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
                     Выделено
                 </div>
-                <div className="mt-1 font-display text-sm tabular-nums text-[#ffffff] dark:text-[#ffffff]">
+                <div className="mt-1 font-display text-sm tabular-nums text-[#1c1a17] dark:text-[#ffffff]">
                     {formatCurrency(allocated)}
                 </div>
             </div>
