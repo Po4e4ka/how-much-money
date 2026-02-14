@@ -1,24 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DB_HOST="hmm-db"
-DB_PORT="3306"
-DB_NAME="${MYSQL_DATABASE:-}"
-DB_USER="${MYSQL_USER:-}"
-DB_PASS="${MYSQL_PASSWORD:-}"
+set -a
+source /var/.env
+set +a
+
 OUT_DIR="${OUT_DIR:-/tmp}"
 
-if [[ -z "$DB_NAME" || -z "$DB_USER" ]]; then
-  echo "Missing DB_NAME or DB_USER." >&2
+if [[ -z "$DB_DATABASE" || -z "$DB_USERNAME" ]]; then
+  echo "Missing DB_DATABASE or DB_USERNAME." >&2
   exit 1
 fi
 
-if [[ -n "$DB_PASS" ]]; then
-  export MYSQL_PWD="$DB_PASS"
+if [[ -n "$DB_PASSWORD" ]]; then
+  export MYSQL_PWD="$DB_PASSWORD"
 fi
 
 DATE_TAG="$(date +%d-%m-%y)"
-OUT_FILE="${OUT_DIR}/${DB_NAME}_dump_${DATE_TAG}.sql"
+OUT_FILE="${OUT_DIR}/${DB_DATABASE}_dump_${DATE_TAG}.sql"
 
 mysqldump \
   --single-transaction \
@@ -27,8 +26,8 @@ mysqldump \
   --skip-lock-tables \
   -h "$DB_HOST" \
   -P "$DB_PORT" \
-  -u "$DB_USER" \
-  "$DB_NAME" \
+  -u "$DB_USERNAME" \
+  "$DB_DATABASE" \
   > "$OUT_FILE"
 
 

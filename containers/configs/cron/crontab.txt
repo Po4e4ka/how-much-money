@@ -1,6 +1,6 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-0 15 * * * root bash -lc 'set -a; source /var/.env; set +a; bash /var/commands/dump_db.sh >> /var/log/cron.log 2>&1'
+0 14 * * * root bash /var/commands/dump_db.sh >> /var/log/cron.log 2>&1
 
 # Очистка лога каждый понедельник
 10 * * * 1 root : > /var/log/cron.log

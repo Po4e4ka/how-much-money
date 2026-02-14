@@ -78,7 +78,7 @@ services:
     command:
       - sh
       - -c
-      - "cp /tmp/hmm-cron-src /etc/cron.d/hmm-cron && chown root:root /etc/cron.d/hmm-cron && chmod 0644 /etc/cron.d/hmm-cron && cron -f"
+      - "cp /tmp/hmm-cron-src /etc/cron.d/hmm-cron && chown root:root /etc/cron.d/hmm-cron && chmod 0644 /etc/cron.d/hmm-cron && cron && exec tail -F /var/log/cron.log"
 
 networks:
   infra_traefik_net:
