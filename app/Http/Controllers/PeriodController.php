@@ -533,21 +533,31 @@ class PeriodController extends Controller
         $expenseIds = [];
 
         foreach ($items as $item) {
+            $name = $item['name'];
             $expense = null;
 
             if (!empty($item['id'])) {
                 $expense = Expense::query()->find($item['id']);
             }
 
+            $sameNameAndType = Expense::query()
+                ->where('name', $name)
+                ->where('type', $type)
+                ->first();
+
             if (!$expense) {
-                $expense = Expense::create([
-                    'name' => $item['name'],
+                $expense = $sameNameAndType ?? Expense::create([
+                    'name' => $name,
                     'type' => $type,
                 ]);
             } else {
-                $expense->name = $item['name'];
-                $expense->type = $type;
-                $expense->save();
+                if ($sameNameAndType && $sameNameAndType->id !== $expense->id) {
+                    $expense = $sameNameAndType;
+                } else {
+                    $expense->name = $name;
+                    $expense->type = $type;
+                    $expense->save();
+                }
             }
 
             $expenseIds[$expense->id] = $pivotResolver($item);
