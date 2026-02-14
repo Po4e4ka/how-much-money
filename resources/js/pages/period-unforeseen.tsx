@@ -6,6 +6,7 @@ import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PillButton } from '@/components/pill-button';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
 import AppLayout from '@/layouts/app-layout';
+import { apiFetch } from '@/lib/api';
 import { delay } from '@/lib/animation';
 import {
     calculateDaysInclusive,
@@ -143,17 +144,12 @@ export default function PeriodUnforeseen() {
         nextAllocated = unforeseenAllocated,
         nextExpenses = unforeseenExpenses,
     ) => {
-        const token =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') ?? '';
-        const response = await fetch(
+        await apiFetch(
             `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
             {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     unforeseen_allocated: nextAllocated,
@@ -170,18 +166,6 @@ export default function PeriodUnforeseen() {
                 }),
             },
         );
-
-        if (!response.ok) {
-            if (response.status === 423) {
-                const payload = (await response.json()) as {
-                    message?: string;
-                };
-                throw new Error(
-                    payload.message ?? 'Период закрыт и не редактируется.',
-                );
-            }
-            throw new Error('Не удалось сохранить непредвиденные траты.');
-        }
 
         writeCache({
             id: period.id,
@@ -231,13 +215,7 @@ export default function PeriodUnforeseen() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch(
-                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
-            );
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить период.');
-            }
-            const payload = (await response.json()) as {
+            const payload = await apiFetch<{
                 data: {
                     id: number;
                     start_date: string;
@@ -250,7 +228,9 @@ export default function PeriodUnforeseen() {
                         actual_amount: number;
                     }[];
                 };
-            };
+            }>(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+            );
             const data = payload.data;
             const nextExpenses = data.unforeseen_expenses.map((item) => ({
                 id: String(item.id),

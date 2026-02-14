@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { apiFetch } from '@/lib/api';
 import { delay } from '@/lib/animation';
 import {
     calculateDaysInclusive,
@@ -150,13 +151,7 @@ export default function PeriodDaily() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch(
-                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
-            );
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить период.');
-            }
-            const payload = (await response.json()) as {
+            const payload = await apiFetch<{
                 data: {
                     id: number;
                     start_date: string;
@@ -164,7 +159,9 @@ export default function PeriodDaily() {
                     daily_expenses: Record<string, number>;
                     is_closed?: boolean;
                 };
-            };
+            }>(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+            );
             const data = payload.data;
             setPeriod({
                 id: data.id,
@@ -205,35 +202,18 @@ export default function PeriodDaily() {
         setSaveError(null);
         setSaveSuccess(false);
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-            const response = await fetch(
+            await apiFetch(
                 `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': token,
                     },
                     body: JSON.stringify({
                         daily_expenses: dailyExpenses,
                     }),
                 },
             );
-
-            if (!response.ok) {
-                if (response.status === 423) {
-                    const payload = (await response.json()) as {
-                        message?: string;
-                    };
-                    throw new Error(
-                        payload.message ?? 'Период закрыт и не редактируется.',
-                    );
-                }
-                throw new Error('Не удалось сохранить ежедневные траты.');
-            }
 
             setSaveSuccess(true);
             writeCache({

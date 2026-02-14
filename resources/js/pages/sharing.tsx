@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import InputError from '@/components/input-error';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
+import { apiFetch, isApiError } from '@/lib/api';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -91,14 +92,13 @@ export default function Sharing() {
         setLoadError(null);
 
         try {
-            const response = await fetch('/api/viewers');
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить список доступов.');
-            }
-
-            const payload = (await response.json()) as { data: Viewer[] };
+            const payload = await apiFetch<{ data: Viewer[] }>('/api/viewers');
             setLinks(payload.data ?? []);
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
             setLoadError(
                 err instanceof Error
                     ? err.message
@@ -112,11 +112,9 @@ export default function Sharing() {
     const fetchIncoming = async () => {
         setIncomingError(null);
         try {
-            const response = await fetch('/api/viewers/shared-with-me');
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить доступы для просмотра.');
-            }
-            const payload = (await response.json()) as { data: IncomingViewer[] };
+            const payload = await apiFetch<{ data: IncomingViewer[] }>(
+                '/api/viewers/shared-with-me',
+            );
             setIncoming(payload.data ?? []);
         } catch (err) {
             setIncomingError(
@@ -158,40 +156,23 @@ export default function Sharing() {
         setIsInviting(true);
 
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-
-            const response = await fetch('/api/viewers', {
+            const payload = await apiFetch<{ data: Viewer }>('/api/viewers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     email: inviteEmail.trim(),
                 }),
             });
-
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (!response.ok) {
-                const payload = (await response.json()) as { message?: string };
-                setInviteError(
-                    payload?.message ?? 'Не удалось отправить приглашение.',
-                );
-                return;
-            }
-
-            const payload = (await response.json()) as { data: Viewer };
             setLinks((prev) => [payload.data, ...prev]);
             setInviteSuccess(true);
             setInviteEmail('');
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
             setInviteError(
                 err instanceof Error
                     ? err.message
@@ -207,30 +188,15 @@ export default function Sharing() {
         const nextStatus = link.status === 'active' ? 'blocked' : 'active';
 
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-
-            const response = await fetch(`/api/viewers/${link.id}`, {
+            await apiFetch(`/api/viewers/${link.id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     status: nextStatus,
                 }),
             });
-
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Не удалось обновить статус.');
-            }
 
             setLinks((prev) =>
                 prev.map((item) =>
@@ -256,30 +222,17 @@ export default function Sharing() {
         setIsDeleting(true);
 
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-
-            const response = await fetch(`/api/viewers/${deleteTarget.id}`, {
+            await apiFetch(`/api/viewers/${deleteTarget.id}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': token,
-                },
             });
-
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Не удалось удалить доступ.');
-            }
 
             setLinks((prev) => prev.filter((item) => item.id !== deleteTarget.id));
             setDeleteTarget(null);
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
             setLoadError(
                 err instanceof Error
                     ? err.message

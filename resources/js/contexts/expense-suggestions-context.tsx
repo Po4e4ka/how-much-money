@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '@/lib/api';
 
 type ExpenseSuggestionsState = {
     previous: string[];
@@ -38,16 +39,12 @@ export const ExpenseSuggestionsProvider = ({
                 if (viewerId) {
                     params.set('viewer_id', viewerId.toString());
                 }
-                const response = await fetch(
+                const payload = await apiFetch<{
+                    data?: { previous?: string[]; all?: string[] };
+                }>(
                     `/api/periods/${periodId}/expense-suggestions?${params.toString()}`,
                     { signal: controller.signal },
                 );
-                if (!response.ok) {
-                    throw new Error('Не удалось загрузить подсказки.');
-                }
-                const payload = (await response.json()) as {
-                    data?: { previous?: string[]; all?: string[] };
-                };
                 setSuggestions({
                     previous: payload.data?.previous ?? [],
                     all: payload.data?.all ?? [],

@@ -7,6 +7,7 @@ import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { PeriodList } from '@/components/period-list';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { UpdateInfoModal } from '@/components/update-info-modal';
+import { apiFetch, isApiError } from '@/lib/api';
 import { delay } from '@/lib/animation';
 import {
     addMonthsClamp,
@@ -80,24 +81,18 @@ export default function Dashboard() {
 
     const handleInfoShown = () => {
         setShowUpdateInfo(false);
-        const token =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') ?? '';
 
-        void fetch('/api/user/info-shown', {
+        void apiFetch('/api/user/info-shown', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token,
             },
         })
-            .then((response) => {
-                if (response.status === 419) {
-                    setShowSessionExpired(true);
-                }
-            })
             .catch((err) => {
+                if (isApiError(err) && err.status === 419) {
+                    setShowSessionExpired(true);
+                    return;
+                }
                 console.error(err);
             });
     };
@@ -107,13 +102,9 @@ export default function Dashboard() {
         setLoadError(null);
         try {
             const params = viewerId ? `?viewer_id=${viewerId}` : '';
-            const response = await fetch(`/api/periods${params}`);
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить периоды.');
-            }
-            const payload = (await response.json()) as {
+            const payload = await apiFetch<{
                 data: DashboardPeriodItem[];
-            };
+            }>(`/api/periods${params}`);
             setPeriods(payload.data ?? []);
         } catch (err) {
             setLoadError(
@@ -168,16 +159,10 @@ export default function Dashboard() {
         setError(null);
 
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-
-            const response = await fetch('/api/periods', {
+            await apiFetch('/api/periods', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
                 },
                 body: JSON.stringify({
                     start_date: startDate,
@@ -186,33 +171,26 @@ export default function Dashboard() {
                 }),
             });
 
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (response.status === 409) {
-                const payload = (await response.json()) as {
-                    overlap?: DashboardPeriodItem;
-                };
-                if (payload.overlap) {
-                    setOverlapPeriod(payload.overlap);
-                    setPendingForce(true);
-                    return;
-                }
-                throw new Error('Период пересекается с существующим.');
-            }
-
-            if (!response.ok) {
-                throw new Error('Не удалось сохранить период.');
-            }
-
             setStartDate('');
             setEndDate('');
             setOverlapPeriod(null);
             setPendingForce(false);
             await fetchPeriods();
         } catch (err) {
+            if (isApiError(err)) {
+                if (err.status === 419) {
+                    setShowSessionExpired(true);
+                    return;
+                }
+                if (err.status === 409 && typeof err.data === 'object' && err.data) {
+                    const overlap = (err.data as { overlap?: DashboardPeriodItem }).overlap;
+                    if (overlap) {
+                        setOverlapPeriod(overlap);
+                        setPendingForce(true);
+                        return;
+                    }
+                }
+            }
             setError(
                 err instanceof Error
                     ? err.message

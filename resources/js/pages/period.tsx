@@ -18,6 +18,7 @@ import { RemainingDailyCard } from '@/components/period/remaining-daily-card';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { UnforeseenExpensesCard } from '@/components/unforeseen-expenses-card';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
+import { apiFetch, isApiError } from '@/lib/api';
 import { delay } from '@/lib/animation';
 import {
     addMonthsClamp,
@@ -265,13 +266,7 @@ export default function Period() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const response = await fetch(
-                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
-            );
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить период.');
-            }
-            const payload = (await response.json()) as {
+            const payload = await apiFetch<{
                 data: {
                     id: number;
                     start_date: string;
@@ -299,7 +294,9 @@ export default function Period() {
                         amount: number;
                     }[];
                 };
-            };
+            }>(
+                `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
+            );
             const data = payload.data;
             const normalized: PeriodData = {
                 id: data.id,
@@ -389,17 +386,12 @@ export default function Period() {
         setSaveError(null);
         setSaveSuccess(false);
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-            const response = await fetch(
+            await apiFetch(
                 `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': token,
                     },
                     body: JSON.stringify({
                     start_date: nextStartDate,
@@ -449,38 +441,6 @@ export default function Period() {
                 },
             );
 
-            if (response.status === 409) {
-                const payload = (await response.json()) as {
-                    overlap?: { id: number; start_date: string; end_date: string };
-                };
-                if (payload.overlap) {
-                    overlapDatesRef.current = {
-                        startDate: nextStartDate,
-                        endDate: nextEndDate,
-                    };
-                    setOverlapPeriod(payload.overlap);
-                    setPendingForce(true);
-                    if (lastSavedDatesRef.current) {
-                        setStartDate(lastSavedDatesRef.current.startDate);
-                        setEndDate(lastSavedDatesRef.current.endDate);
-                    }
-                    return;
-                }
-                throw new Error('Период пересекается с существующим.');
-            }
-
-            if (!response.ok) {
-                if (response.status === 423) {
-                    const payload = (await response.json()) as {
-                        message?: string;
-                    };
-                    throw new Error(
-                        payload.message ?? 'Период закрыт и не редактируется.',
-                    );
-                }
-                throw new Error('Не удалось сохранить период.');
-            }
-
             setStartDate(nextStartDate);
             setEndDate(nextEndDate);
             setSaveSuccess(true);
@@ -505,6 +465,26 @@ export default function Period() {
                 isClosed: period.isClosed,
             });
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
+            if (isApiError(err) && err.status === 409 && err.data && typeof err.data === 'object') {
+                const overlap = (err.data as { overlap?: { id: number; start_date: string; end_date: string } }).overlap;
+                if (overlap) {
+                    overlapDatesRef.current = {
+                        startDate: nextStartDate,
+                        endDate: nextEndDate,
+                    };
+                    setOverlapPeriod(overlap);
+                    setPendingForce(true);
+                    if (lastSavedDatesRef.current) {
+                        setStartDate(lastSavedDatesRef.current.startDate);
+                        setEndDate(lastSavedDatesRef.current.endDate);
+                    }
+                    return;
+                }
+            }
             setSaveError(
                 err instanceof Error
                     ? err.message
@@ -547,26 +527,20 @@ export default function Period() {
         setIsDeleting(true);
         setSaveError(null);
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-            const response = await fetch(
+            await apiFetch(
                 `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': token,
-                    },
                 },
             );
-            if (!response.ok) {
-                throw new Error('Не удалось удалить период.');
-            }
             window.location.href = viewerId
                 ? `/shared/${viewerId}`
                 : dashboard().url;
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
             setSaveError(
                 err instanceof Error
                     ? err.message
@@ -584,37 +558,14 @@ export default function Period() {
         setIsClosing(true);
         setSaveError(null);
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-            const response = await fetch(
+            const payload = await apiFetch<{
+                data?: { is_closed?: boolean };
+            }>(
                 `/api/periods/${periodId}/close${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': token,
-                    },
                 },
             );
-
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (!response.ok) {
-                const payload = (await response.json()) as {
-                    message?: string;
-                };
-                throw new Error(
-                    payload.message ?? 'Не удалось закрыть период.',
-                );
-            }
-
-            const payload = (await response.json()) as {
-                data?: { is_closed?: boolean };
-            };
             const updated = {
                 ...period,
                 isClosed: payload.data?.is_closed ?? true,
@@ -635,6 +586,10 @@ export default function Period() {
                 isClosed: updated.isClosed,
             });
         } catch (err) {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
             setSaveError(
                 err instanceof Error
                     ? err.message
@@ -651,17 +606,14 @@ export default function Period() {
         }
         setIsPinning(true);
         try {
-            const token =
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') ?? '';
-            const response = await fetch(
+            const payload = await apiFetch<{
+                data?: { is_pinned: boolean };
+            }>(
                 `/api/periods/${periodId}/pin${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': token,
                     },
                     body: JSON.stringify({
                         pinned: !period.isPinned,
@@ -669,42 +621,32 @@ export default function Period() {
                     }),
                 },
             );
-
-            if (response.status === 419) {
-                setShowSessionExpired(true);
-                return;
-            }
-
-            if (response.status === 409) {
-                const payload = (await response.json()) as {
-                    pinned?: { start_date: string; end_date: string };
-                };
-                if (payload.pinned) {
-                    setPinnedTitle(
-                        `${formatDateShort(payload.pinned.start_date)} — ${formatDateShort(
-                            payload.pinned.end_date,
-                        )}`,
-                    );
-                } else {
-                    setPinnedTitle(undefined);
-                }
-                setShowPinModal(true);
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Не удалось изменить закрепление периода.');
-            }
-
-            const payload = (await response.json()) as {
-                data?: { is_pinned: boolean };
-            };
             const isPinned = payload.data?.is_pinned ?? !period.isPinned;
             const updated = { ...period, isPinned };
             setPeriod(updated);
             writeCache(updated);
             setShowPinModal(false);
         } catch (err) {
+            if (isApiError(err)) {
+                if (err.status === 419) {
+                    setShowSessionExpired(true);
+                    return;
+                }
+                if (err.status === 409 && err.data && typeof err.data === 'object') {
+                    const pinned = (err.data as { pinned?: { start_date: string; end_date: string } }).pinned;
+                    if (pinned) {
+                        setPinnedTitle(
+                            `${formatDateShort(pinned.start_date)} — ${formatDateShort(
+                                pinned.end_date,
+                            )}`,
+                        );
+                    } else {
+                        setPinnedTitle(undefined);
+                    }
+                    setShowPinModal(true);
+                    return;
+                }
+            }
             setSaveError(
                 err instanceof Error
                     ? err.message
