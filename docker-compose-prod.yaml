@@ -29,7 +29,7 @@ services:
       - "traefik.http.routers.hmm.tls.certresolver=letsencrypt"
       - "traefik.http.services.hmm.loadbalancer.server.port=80"
     networks:
-      - infra_traefik_net
+#      - infra_traefik_net
       - hmm_net
 
   hmm-db:
@@ -63,6 +63,7 @@ services:
     volumes:
       - ./containers/configs/cron/crontab.txt:/tmp/hmm-cron-src:ro
       - ./containers/configs/cron/commands:/var/commands:ro
+      - ./var/logs/cron/cron.log:/var/log/cron.log
       - ./.env:/var/.env:ro
       - /etc/localtime:/etc/localtime:ro
     env_file:
