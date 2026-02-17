@@ -19,6 +19,27 @@ Route::get('onboarding', function () {
     return Inertia::render('onboarding');
 })->name('onboarding');
 
+Route::get('onboarding/periods/{period}', function (string $period) {
+    return Inertia::render('onboarding-period', [
+        'periodId' => $period,
+        'onboardingMode' => true,
+    ]);
+})->name('onboarding.periods.show');
+
+Route::get('onboarding/periods/{period}/daily', function (string $period) {
+    return Inertia::render('onboarding-period-daily', [
+        'periodId' => $period,
+        'onboardingMode' => true,
+    ]);
+})->name('onboarding.periods.daily');
+
+Route::get('onboarding/periods/{period}/unforeseen', function (string $period) {
+    return Inertia::render('onboarding-period-unforeseen', [
+        'periodId' => $period,
+        'onboardingMode' => true,
+    ]);
+})->name('onboarding.periods.unforeseen');
+
 Route::get('dashboard', function () {
     return Inertia::render('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

@@ -1,6 +1,6 @@
 import { BlockTitle } from '@/components/block-title';
-import { PillButton } from '@/components/pill-button';
 import { ExpenseNameInput } from '@/components/period/expense-name-input';
+import { PillButton } from '@/components/pill-button';
 import { formatCurrency, toIntegerValue } from '@/lib/number';
 import type { IncomeBlockProps } from '@/types/period';
 
@@ -15,14 +15,23 @@ export const IncomeBlock = ({
     onAfterDelete,
     invalidNameIds,
     readOnly = false,
+    containerRef,
+    addRowTargetRef,
+    guidedIncomeId,
+    guidedRowTargetRef,
 }: IncomeBlockProps) => (
-    <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+    <div
+        ref={containerRef}
+        className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10"
+    >
         <div className="flex items-center justify-between">
             <BlockTitle>Приход</BlockTitle>
             <div className="flex items-center gap-2">
-                <PillButton type="button" onClick={onAdd} disabled={readOnly}>
-                    + Строка
-                </PillButton>
+                <div ref={addRowTargetRef}>
+                    <PillButton type="button" onClick={onAdd} disabled={readOnly}>
+                        + Строка
+                    </PillButton>
+                </div>
                 <PillButton
                     type="button"
                     onClick={onToggleDelete}
@@ -53,6 +62,11 @@ export const IncomeBlock = ({
                 return (
                 <div
                     key={item.id}
+                    ref={
+                        guidedIncomeId && item.id === guidedIncomeId
+                            ? guidedRowTargetRef
+                            : undefined
+                    }
                     className={`grid items-center gap-2 ${
                         showDelete
                             ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'

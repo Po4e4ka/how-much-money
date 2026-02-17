@@ -5,6 +5,7 @@ export type AppLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
     hideBreadcrumbsOnMobile?: boolean;
+    hideHeader?: boolean;
 };
 
 export type AuthLayoutProps = {

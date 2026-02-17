@@ -17,6 +17,7 @@ type ExpenseSuggestionsProviderProps = {
     periodId: string;
     type: 'income' | 'mandatory' | 'external' | 'unforeseen';
     viewerId?: number;
+    disabled?: boolean;
     children: ReactNode;
 };
 
@@ -24,6 +25,7 @@ export const ExpenseSuggestionsProvider = ({
     periodId,
     type,
     viewerId,
+    disabled = false,
     children,
 }: ExpenseSuggestionsProviderProps) => {
     const [suggestions, setSuggestions] = useState<ExpenseSuggestionsState>({
@@ -31,7 +33,19 @@ export const ExpenseSuggestionsProvider = ({
         all: [],
     });
 
+    const disabledValue = useMemo(
+        () => ({
+            previous: [],
+            all: [],
+        }),
+        [],
+    );
+
     useEffect(() => {
+        if (disabled) {
+            return;
+        }
+
         const controller = new AbortController();
         const fetchSuggestions = async () => {
             try {
@@ -58,9 +72,17 @@ export const ExpenseSuggestionsProvider = ({
 
         void fetchSuggestions();
         return () => controller.abort();
-    }, [periodId, type, viewerId]);
+    }, [periodId, type, viewerId, disabled]);
 
     const value = useMemo(() => suggestions, [suggestions]);
+
+    if (disabled) {
+        return (
+            <ExpenseSuggestionsContext.Provider value={disabledValue}>
+                {children}
+            </ExpenseSuggestionsContext.Provider>
+        );
+    }
 
     return (
         <ExpenseSuggestionsContext.Provider value={value}>

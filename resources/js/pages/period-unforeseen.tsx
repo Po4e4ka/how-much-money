@@ -2,18 +2,20 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BigDigit } from '@/components/big-digit';
 import { BlockTitle } from '@/components/block-title';
+import { OnboardingDemoBanner } from '@/components/onboarding-demo-banner';
 import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PillButton } from '@/components/pill-button';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
 import AppLayout from '@/layouts/app-layout';
-import { apiFetch } from '@/lib/api';
 import { delay } from '@/lib/animation';
+import { apiFetch } from '@/lib/api';
 import {
     calculateDaysInclusive,
     formatDateShort,
     formatMonthRange,
 } from '@/lib/date';
 import { formatCurrency, toNumberOrZero, toIntegerValue } from '@/lib/number';
+import { onboardingApiFetch } from '@/lib/onboarding-api';
 import { calculateAmountTotal } from '@/lib/period-calculations';
 import type { OffIncomeItem, PeriodData } from '@/types/period';
 
@@ -22,6 +24,7 @@ type ViewerPageProps = {
     viewerName?: string;
     viewerEmail?: string;
     viewerMode?: boolean;
+    onboardingMode?: boolean;
 };
 
 type PeriodUnforeseenData = {
@@ -43,10 +46,17 @@ const emptyPeriod: PeriodUnforeseenData = {
 };
 
 export default function PeriodUnforeseen() {
-    const { periodId, viewerId, viewerName, viewerEmail, viewerMode } = usePage<
-        { periodId: string } & ViewerPageProps
-    >().props;
+    const {
+        periodId,
+        viewerId,
+        viewerName,
+        viewerEmail,
+        viewerMode,
+        onboardingMode,
+    } = usePage<{ periodId: string } & ViewerPageProps>().props;
     const isViewerMode = Boolean(viewerId ?? viewerMode);
+    const isOnboardingMode = Boolean(onboardingMode);
+    const requestFetch = isOnboardingMode ? onboardingApiFetch : apiFetch;
     const [period, setPeriod] = useState<PeriodUnforeseenData>(emptyPeriod);
     const [unforeseenAllocated, setUnforeseenAllocated] = useState(0);
     const [unforeseenExpenses, setUnforeseenExpenses] = useState<OffIncomeItem[]>(
@@ -144,7 +154,7 @@ export default function PeriodUnforeseen() {
         nextAllocated = unforeseenAllocated,
         nextExpenses = unforeseenExpenses,
     ) => {
-        await apiFetch(
+        await requestFetch(
             `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
             {
                 method: 'PUT',
@@ -215,7 +225,7 @@ export default function PeriodUnforeseen() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const payload = await apiFetch<{
+            const payload = await requestFetch<{
                 data: {
                     id: number;
                     start_date: string;
@@ -375,9 +385,14 @@ export default function PeriodUnforeseen() {
     }, [saveTick]);
 
     return (
-        <AppLayout>
+        <AppLayout hideHeader={isOnboardingMode}>
             <Head title={`Непредвиденные расходы · ${periodTitle}`} />
-            <div className="relative flex flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee] sm:gap-8 sm:p-6">
+            {isOnboardingMode && <OnboardingDemoBanner />}
+            <div
+                className={`relative flex flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee] sm:gap-8 sm:p-6 ${
+                    isOnboardingMode ? 'pt-16' : ''
+                }`}
+            >
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
                 <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
 
@@ -397,7 +412,9 @@ export default function PeriodUnforeseen() {
                         href={
                             viewerId
                                 ? `/shared/${viewerId}/periods/${periodId}`
-                                : `/periods/${periodId}`
+                                : isOnboardingMode
+                                  ? `/onboarding/periods/${periodId}`
+                                  : `/periods/${periodId}`
                         }
                         prefetch
                         className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
@@ -460,6 +477,7 @@ export default function PeriodUnforeseen() {
                                 periodId={periodId}
                                 type="unforeseen"
                                 viewerId={viewerId}
+                                disabled={isOnboardingMode}
                             >
                                 <OffIncomeBlock
                                     title="Непредвиденные расходы"

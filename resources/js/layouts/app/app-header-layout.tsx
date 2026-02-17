@@ -7,13 +7,16 @@ export default function AppHeaderLayout({
     children,
     breadcrumbs,
     hideBreadcrumbsOnMobile,
+    hideHeader,
 }: AppLayoutProps) {
     return (
         <AppShell>
-            <AppHeader
-                breadcrumbs={breadcrumbs}
-                hideBreadcrumbsOnMobile={hideBreadcrumbsOnMobile}
-            />
+            {!hideHeader && (
+                <AppHeader
+                    breadcrumbs={breadcrumbs}
+                    hideBreadcrumbsOnMobile={hideBreadcrumbsOnMobile}
+                />
+            )}
             <AppContent>{children}</AppContent>
         </AppShell>
     );

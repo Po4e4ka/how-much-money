@@ -1,32 +1,37 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
-import { PillButton } from '@/components/pill-button';
-import { ConfirmPinModal } from '@/components/confirm-pin-modal';
 import { ConfirmClosePeriodModal } from '@/components/confirm-close-period-modal';
-import { OverlapPeriodModal } from '@/components/overlap-period-modal';
+import { ConfirmPinModal } from '@/components/confirm-pin-modal';
 import { DailyExpensesCard } from '@/components/daily-expenses-card';
-import { PeriodDaysCard } from '@/components/period-days-card';
+import { OnboardingDemoBanner } from '@/components/onboarding-demo-banner';
+import { OnboardingTour, type TourStep } from '@/components/onboarding-tour';
+import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { ActualRemainingCard } from '@/components/period/actual-remaining-card';
 import { ExpensesBlock } from '@/components/period/expenses-block';
 import { IncomeBlock } from '@/components/period/income-block';
 import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PlannedAverageCard } from '@/components/period/planned-average-card';
 import { RemainingDailyCard } from '@/components/period/remaining-daily-card';
+import { PeriodDaysCard } from '@/components/period-days-card';
+import { PillButton } from '@/components/pill-button';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { UnforeseenExpensesCard } from '@/components/unforeseen-expenses-card';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
-import { apiFetch, isApiError } from '@/lib/api';
+import AppLayout from '@/layouts/app-layout';
 import { delay } from '@/lib/animation';
+import { apiFetch, isApiError } from '@/lib/api';
 import {
     addMonthsClamp,
     calculateDaysInclusive,
     formatDateShort,
     formatMonthRange,
 } from '@/lib/date';
-import { formatCurrency, toNumberOrZero } from '@/lib/number';
+import { toNumberOrZero } from '@/lib/number';
+import { onboardingApiFetch } from '@/lib/onboarding-api';
+import {
+    isPeriodGuideCompleted,
+    markPeriodGuideCompleted,
+} from '@/lib/onboarding-session';
 import {
     calculateAmountTotal,
     calculateDailyExpensesTotal,
@@ -35,6 +40,7 @@ import {
     calculatePeriodMetrics,
     getInvalidIncomeIds,
 } from '@/lib/period-calculations';
+import { dashboard } from '@/routes';
 import type {
     ExpenseItem,
     IncomeItem,
@@ -61,13 +67,21 @@ type ViewerPageProps = {
     viewerName?: string;
     viewerEmail?: string;
     viewerMode?: boolean;
+    onboardingMode?: boolean;
 };
 
 export default function Period() {
-    const { periodId, viewerId, viewerName, viewerEmail, viewerMode } = usePage<
-        { periodId: string } & ViewerPageProps
-    >().props;
+    const {
+        periodId,
+        viewerId,
+        viewerName,
+        viewerEmail,
+        viewerMode,
+        onboardingMode,
+    } = usePage<{ periodId: string } & ViewerPageProps>().props;
     const isViewerMode = Boolean(viewerId ?? viewerMode);
+    const isOnboardingMode = Boolean(onboardingMode);
+    const requestFetch = isOnboardingMode ? onboardingApiFetch : apiFetch;
     const [period, setPeriod] = useState<PeriodData>(emptyPeriod);
     const [incomes, setIncomes] = useState<IncomeItem[]>([]);
     const [startDate, setStartDate] = useState('');
@@ -95,7 +109,6 @@ export default function Period() {
     } | null>(null);
     const [pendingForce, setPendingForce] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [saveSuccess, setSaveSuccess] = useState(false);
     const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isPinning, setIsPinning] = useState(false);
@@ -104,6 +117,10 @@ export default function Period() {
     const [showCloseModal, setShowCloseModal] = useState(false);
     const [showSessionExpired, setShowSessionExpired] = useState(false);
     const [pinnedTitle, setPinnedTitle] = useState<string | undefined>();
+    const [isPeriodGuideOpen, setIsPeriodGuideOpen] = useState(
+        () => isOnboardingMode && !isPeriodGuideCompleted(),
+    );
+    const [guidedIncomeId, setGuidedIncomeId] = useState<string | null>(null);
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
     const incomeNameError = 'Заполните названия прихода.';
@@ -113,6 +130,12 @@ export default function Period() {
     const overlapDatesRef = useRef<{ startDate: string; endDate: string } | null>(
         null,
     );
+    const periodHeaderRef = useRef<HTMLElement>(null);
+    const incomeBlockRef = useRef<HTMLDivElement>(null);
+    const incomeAddRowRef = useRef<HTMLDivElement>(null);
+    const guidedIncomeRowRef = useRef<HTMLDivElement>(null);
+    const mandatoryBlockRef = useRef<HTMLDivElement>(null);
+    const externalBlockRef = useRef<HTMLDivElement>(null);
 
     const cacheKey = useMemo(
         () => `period:${viewerId ?? 'self'}:${periodId}`,
@@ -206,17 +229,63 @@ export default function Period() {
         filledDays,
     });
     const isReadOnly = period.isClosed || isViewerMode;
-
-    const breadcrumbs: BreadcrumbItem[] = [
-        {
-            title: 'Dashboard',
-            href: dashboard().url,
-        },
-        {
-            title: periodTitle,
-            href: `/periods/${periodId}`,
-        },
-    ];
+    const periodGuideSteps = useMemo<TourStep[]>(
+        () => [
+            {
+                stepId: 'period-intro',
+                title: 'Страница периода',
+                text: 'На данной странице нужно указать информацию о доходах и планах трат. Пройдёмся по блокам.',
+                targetRef: periodHeaderRef,
+                placement: 'bottom',
+            },
+            {
+                stepId: 'income-block',
+                title: 'Приход',
+                text: 'Здесь указываются все приходящие суммы, из которых будут вычитаться затраты.',
+                targetRef: incomeBlockRef,
+                placement: 'right',
+            },
+            {
+                stepId: 'income-add',
+                title: 'Добавьте новый приход',
+                text: 'Нажмите «+ Строка», чтобы добавить строку прихода.',
+                targetRef: incomeAddRowRef,
+                placement: 'bottom',
+                captureClick: true,
+                advanceDelayMs: 220,
+                hideNext: true,
+            },
+            {
+                stepId: 'income-fill',
+                title: 'Заполните строку прихода',
+                text: 'Заполните строку и нажмите «Далее».',
+                targetRef: guidedIncomeRowRef,
+                placement: 'right',
+            },
+            {
+                stepId: 'income-sum',
+                title: 'Сумма прихода',
+                text: 'Добавьте ещё строки с приходом, если хотите. Они будут суммироваться автоматически.',
+                targetRef: incomeBlockRef,
+                placement: 'right',
+            },
+            {
+                stepId: 'mandatory-block',
+                title: 'Обязательные траты',
+                text: 'Здесь указываются траты, которые планируются на месяц. Фактическая сумма по умолчанию равна планируемой, но её можно изменить. Добавьте: маникюр, спорт зал, комуналка, бензин.',
+                targetRef: mandatoryBlockRef,
+                placement: 'right',
+            },
+            {
+                stepId: 'external-block',
+                title: 'Сторонние траты',
+                text: 'Здесь указываются траты, которые не включены в расчёт, но важно учитывать, что они были. Они не вычитаются из прихода.',
+                targetRef: externalBlockRef,
+                placement: 'right',
+            },
+        ],
+        [],
+    );
 
     const hasFullCache = (cached: PeriodData | null): cached is PeriodData =>
         Boolean(
@@ -266,7 +335,7 @@ export default function Period() {
         setIsLoading(true);
         setLoadError(null);
         try {
-            const payload = await apiFetch<{
+            const payload = await requestFetch<{
                 data: {
                     id: number;
                     start_date: string;
@@ -384,9 +453,8 @@ export default function Period() {
 
         setIsSaving(true);
         setSaveError(null);
-        setSaveSuccess(false);
         try {
-            await apiFetch(
+            await requestFetch(
                 `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'PUT',
@@ -443,7 +511,6 @@ export default function Period() {
 
             setStartDate(nextStartDate);
             setEndDate(nextEndDate);
-            setSaveSuccess(true);
             setOverlapPeriod(null);
             setPendingForce(false);
             overlapDatesRef.current = null;
@@ -499,14 +566,16 @@ export default function Period() {
         if (isReadOnly) {
             return;
         }
+        const nextId = `i${Date.now()}`;
         setIncomes((prev) => [
             ...prev,
             {
-                id: `i${Date.now()}`,
+                id: nextId,
                 name: '',
                 amount: '',
             },
         ]);
+        setGuidedIncomeId(nextId);
         void handleSave();
     };
 
@@ -527,7 +596,7 @@ export default function Period() {
         setIsDeleting(true);
         setSaveError(null);
         try {
-            await apiFetch(
+            await requestFetch(
                 `/api/periods/${periodId}${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
                     method: 'DELETE',
@@ -558,7 +627,7 @@ export default function Period() {
         setIsClosing(true);
         setSaveError(null);
         try {
-            const payload = await apiFetch<{
+            const payload = await requestFetch<{
                 data?: { is_closed?: boolean };
             }>(
                 `/api/periods/${periodId}/close${viewerQuery ? `?${viewerQuery}` : ''}`,
@@ -606,7 +675,7 @@ export default function Period() {
         }
         setIsPinning(true);
         try {
-            const payload = await apiFetch<{
+            const payload = await requestFetch<{
                 data?: { is_pinned: boolean };
             }>(
                 `/api/periods/${periodId}/pin${viewerQuery ? `?${viewerQuery}` : ''}`,
@@ -684,20 +753,40 @@ export default function Period() {
         }
     }, [incomes, saveError]);
 
+    useEffect(() => {
+        if (!guidedIncomeId || !isPeriodGuideOpen) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            const input = guidedIncomeRowRef.current?.querySelector('input');
+            if (input instanceof HTMLInputElement) {
+                input.focus();
+                return;
+            }
+        }, 140);
+
+        return () => window.clearTimeout(timer);
+    }, [guidedIncomeId, isPeriodGuideOpen]);
+
     return (
-        <AppLayout>
+        <AppLayout hideHeader={isOnboardingMode}>
             <Head title={periodTitle} />
+            {isOnboardingMode && <OnboardingDemoBanner />}
             <div
                 className={`relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee]${
                     period.isClosed
                         ? ' bg-emerald-50/70 dark:bg-emerald-950/20'
                         : ''
-                }`}
+                }${isOnboardingMode ? ' pt-16' : ''}`}
             >
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
                 <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
 
-                <section className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+                <section
+                    ref={periodHeaderRef}
+                    className="relative z-10 flex flex-wrap items-center justify-between gap-6"
+                >
                     <div>
                         <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
                             Период
@@ -749,7 +838,13 @@ export default function Period() {
                             </PillButton>
                         )}
                         <Link
-                            href={viewerId ? `/shared/${viewerId}` : dashboard()}
+                            href={
+                                viewerId
+                                    ? `/shared/${viewerId}`
+                                    : isOnboardingMode
+                                      ? '/onboarding'
+                                      : dashboard()
+                            }
                             prefetch
                             className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
                         >
@@ -787,6 +882,7 @@ export default function Period() {
                             periodId={periodId}
                             type="income"
                             viewerId={viewerId}
+                            disabled={isOnboardingMode}
                         >
                             <IncomeBlock
                                 items={incomes}
@@ -801,6 +897,10 @@ export default function Period() {
                                 onAfterDelete={requestSaveAfterChange}
                                 invalidNameIds={invalidIncomeIds}
                                 readOnly={isReadOnly}
+                                containerRef={incomeBlockRef}
+                                addRowTargetRef={incomeAddRowRef}
+                                guidedIncomeId={guidedIncomeId}
+                                guidedRowTargetRef={guidedIncomeRowRef}
                             />
                         </ExpenseSuggestionsProvider>
 
@@ -808,6 +908,7 @@ export default function Period() {
                             periodId={periodId}
                             type="mandatory"
                             viewerId={viewerId}
+                            disabled={isOnboardingMode}
                         >
                             <ExpensesBlock
                                 title="Обязательные траты"
@@ -825,13 +926,16 @@ export default function Period() {
                                 onBlurField={handleSave}
                                 onAfterDelete={requestSaveAfterChange}
                                 readOnly={isReadOnly}
+                                containerRef={mandatoryBlockRef}
                             />
                         </ExpenseSuggestionsProvider>
                         <UnforeseenExpensesCard
                             href={
                                 viewerId
                                     ? `/shared/${viewerId}/periods/${periodId}/unforeseen`
-                                    : `/periods/${periodId}/unforeseen`
+                                    : isOnboardingMode
+                                      ? `/onboarding/periods/${periodId}/unforeseen`
+                                      : `/periods/${periodId}/unforeseen`
                             }
                             allocated={unforeseenAllocated}
                             spent={totalUnforeseenSpent}
@@ -841,6 +945,7 @@ export default function Period() {
                             periodId={periodId}
                             type="external"
                             viewerId={viewerId}
+                            disabled={isOnboardingMode}
                         >
                             <OffIncomeBlock
                                 title="Сторонние траты"
@@ -856,6 +961,7 @@ export default function Period() {
                                 onBlurField={handleSave}
                                 onAfterDelete={requestSaveAfterChange}
                                 readOnly={isReadOnly}
+                                containerRef={externalBlockRef}
                             />
                         </ExpenseSuggestionsProvider>
                     </div>
@@ -899,7 +1005,9 @@ export default function Period() {
                             href={
                                 viewerId
                                     ? `/shared/${viewerId}/periods/${periodId}/daily`
-                                    : `/periods/${periodId}/daily`
+                                    : isOnboardingMode
+                                      ? `/onboarding/periods/${periodId}/daily`
+                                      : `/periods/${periodId}/daily`
                             }
                         />
                         <PlannedAverageCard
@@ -953,7 +1061,11 @@ export default function Period() {
 
                 {!isViewerMode && overlapPeriod && (
                     <OverlapPeriodModal
-                        href={`/periods/${overlapPeriod.id}`}
+                        href={
+                            isOnboardingMode
+                                ? `/onboarding/periods/${overlapPeriod.id}`
+                                : `/periods/${overlapPeriod.id}`
+                        }
                         title={`${formatDateShort(
                             overlapPeriod.start_date,
                         )} — ${formatDateShort(overlapPeriod.end_date)}`}
@@ -983,6 +1095,17 @@ export default function Period() {
                 )}
 
             </div>
+            {isOnboardingMode && !isViewerMode && (
+                <OnboardingTour
+                    open={isPeriodGuideOpen}
+                    steps={periodGuideSteps}
+                    refreshKey={`${incomes.length}:${expenses.length}`}
+                    onClose={() => {
+                        markPeriodGuideCompleted();
+                        setIsPeriodGuideOpen(false);
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

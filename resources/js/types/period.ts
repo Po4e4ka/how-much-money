@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import type { RefObject } from 'react';
 
 export type AmountItem = {
     amount: number | '';
@@ -66,6 +67,8 @@ export type ExpensesBlockProps = {
     onBlurField: () => void;
     onAfterDelete: () => void;
     readOnly?: boolean;
+    containerRef?: RefObject<HTMLDivElement | null>;
+    addRowTargetRef?: RefObject<HTMLDivElement | null>;
 };
 
 export type OffIncomeBlockProps = {
@@ -80,6 +83,8 @@ export type OffIncomeBlockProps = {
     onBlurField: () => void;
     onAfterDelete: () => void;
     readOnly?: boolean;
+    containerRef?: RefObject<HTMLDivElement | null>;
+    addRowTargetRef?: RefObject<HTMLDivElement | null>;
 };
 
 export type IncomeBlockProps = {
@@ -93,4 +98,8 @@ export type IncomeBlockProps = {
     onAfterDelete: () => void;
     invalidNameIds: string[];
     readOnly?: boolean;
+    containerRef?: RefObject<HTMLDivElement | null>;
+    addRowTargetRef?: RefObject<HTMLDivElement | null>;
+    guidedIncomeId?: string | null;
+    guidedRowTargetRef?: RefObject<HTMLDivElement | null>;
 };

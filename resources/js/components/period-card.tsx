@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import type { Ref } from 'react';
 import { PillButton } from '@/components/pill-button';
 
 type PeriodCardProps = {
@@ -7,6 +8,7 @@ type PeriodCardProps = {
     subtitle: string;
     isClosed?: boolean;
     actualRemaining?: number | null;
+    elementRef?: Ref<HTMLAnchorElement>;
 };
 
 const formatSignedCurrency = (value: number) => {
@@ -24,8 +26,10 @@ export const PeriodCard = ({
     subtitle,
     isClosed = false,
     actualRemaining,
+    elementRef,
 }: PeriodCardProps) => (
     <Link
+        ref={elementRef}
         href={href}
         prefetch
         className={`rounded-[28px] border bg-white/70 p-5 text-left shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:bg-white/10 ${

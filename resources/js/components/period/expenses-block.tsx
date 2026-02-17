@@ -1,7 +1,7 @@
 import { BlockTitle } from '@/components/block-title';
+import { ExpenseNameInput } from '@/components/period/expense-name-input';
 import { PillButton } from '@/components/pill-button';
 import { formatCurrency, formatSignedCurrency, toIntegerValue } from '@/lib/number';
-import { ExpenseNameInput } from '@/components/period/expense-name-input';
 import type { ExpensesBlockProps } from '@/types/period';
 
 export const ExpensesBlock = ({
@@ -18,29 +18,36 @@ export const ExpensesBlock = ({
     onBlurField,
     onAfterDelete,
     readOnly = false,
+    containerRef,
+    addRowTargetRef,
 }: ExpensesBlockProps) => (
-        <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
+        <div
+            ref={containerRef}
+            className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10"
+        >
             <div className="flex items-center justify-between">
                 <BlockTitle>{title}</BlockTitle>
                 <div className="flex items-center gap-2">
-                    <PillButton
-                        type="button"
-                        onClick={() =>
-                            setItems((prev) => [
-                                ...prev,
-                                {
-                                    id: `${idPrefix}${Date.now()}`,
-                                    name: '',
-                                    plannedAmount: '',
-                                    actualAmount: '',
-                                    actualTouched: false,
-                                },
-                            ])
-                        }
-                        disabled={readOnly}
-                    >
-                        + Строка
-                    </PillButton>
+                    <div ref={addRowTargetRef}>
+                        <PillButton
+                            type="button"
+                            onClick={() =>
+                                setItems((prev) => [
+                                    ...prev,
+                                    {
+                                        id: `${idPrefix}${Date.now()}`,
+                                        name: '',
+                                        plannedAmount: '',
+                                        actualAmount: '',
+                                        actualTouched: false,
+                                    },
+                                ])
+                            }
+                            disabled={readOnly}
+                        >
+                            + Строка
+                        </PillButton>
+                    </div>
                     <PillButton
                         type="button"
                         onClick={onToggleDelete}

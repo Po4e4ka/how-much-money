@@ -23,13 +23,15 @@ services:
       - "host.docker.internal:host-gateway"
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=infra_traefik_net"
-      - "traefik.http.routers.hmm.rule=Host(`hmm.devilops.tech`)"
+      - "traefik.docker.network=web"
+
+      - "traefik.http.routers.hmm.rule=Host(`how-much-money.ru`) || Host(`www.how-much-money.ru`)"
       - "traefik.http.routers.hmm.entrypoints=websecure"
       - "traefik.http.routers.hmm.tls.certresolver=letsencrypt"
+
       - "traefik.http.services.hmm.loadbalancer.server.port=80"
     networks:
-#      - infra_traefik_net
+      - web
       - hmm_net
 
   hmm-db:
@@ -81,7 +83,7 @@ services:
       - "cp /tmp/hmm-cron-src /etc/cron.d/hmm-cron && chown root:root /etc/cron.d/hmm-cron && chmod 0644 /etc/cron.d/hmm-cron && cron && exec tail -F /var/log/cron.log"
 
 networks:
-  infra_traefik_net:
+  web:
     external: true
   hmm_net:
     internal: false
