@@ -11,8 +11,6 @@ services:
       - ./:/var/www
       - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
-    ports:
-      - '4210:80'
     entrypoint: /docker-entrypoint.d/entrypoint.sh
     command:
       - "unitd"
@@ -34,30 +32,6 @@ services:
       - web
       - hmm_net
 
-  hmm-db:
-    container_name: hmm-db
-    build:
-      dockerfile: containers/percona.Dockerfile
-      args:
-        USER_ID: 1000
-        GROUP_ID: 1000
-    environment: &database_env
-      MYSQL_USER: alex
-      MYSQL_PASSWORD: 1
-      MYSQL_DATABASE: hmm
-      MYSQL_ROOT_PASSWORD: 1
-    ports:
-      - '4211:3306'
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ./containers/init-scripts/percona-init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./var/data/percona:/var/lib/mysql
-      - ./var/logs/percona:/var/log/mysql
-      - /etc/localtime:/etc/localtime:ro
-    networks:
-      - hmm_net
-
   hmm-cron:
     container_name: hmm-cron
     build:
@@ -71,10 +45,7 @@ services:
     env_file:
       - '.env'
     environment:
-      <<: *database_env
       TZ: ${TZ:-UTC}
-    depends_on:
-      - hmm-db
     networks:
       - hmm_net
     command:
