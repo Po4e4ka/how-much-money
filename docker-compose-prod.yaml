@@ -39,6 +39,7 @@ services:
     volumes:
       - ./containers/configs/cron/crontab.txt:/tmp/hmm-cron-src:ro
       - ./containers/configs/cron/commands:/var/commands:ro
+      - ./database.sqlite:/shared/database.sqlite
       - ./var/logs/cron/cron.log:/var/log/cron.log
       - ./.env:/var/.env:ro
       - /etc/localtime:/etc/localtime:ro
