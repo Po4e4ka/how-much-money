@@ -1,8 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem, SharedData } from '@/types';
+import InputError from '@/components/input-error';
+import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +14,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/input-error';
-import { SessionExpiredModal } from '@/components/session-expired-modal';
+import AppLayout from '@/layouts/app-layout';
 import { apiFetch, isApiError } from '@/lib/api';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

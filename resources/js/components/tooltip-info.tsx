@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { HelpCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type TooltipInfoProps = {

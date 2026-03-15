@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BigDigit } from '@/components/big-digit';
 import { BlockTitle } from '@/components/block-title';
 import { OnboardingDemoBanner } from '@/components/onboarding-demo-banner';
+import { OnboardingTour, type TourStep } from '@/components/onboarding-tour';
 import { OffIncomeBlock } from '@/components/period/off-income-block';
 import { PillButton } from '@/components/pill-button';
 import { ExpenseSuggestionsProvider } from '@/contexts/expense-suggestions-context';
@@ -16,6 +17,10 @@ import {
 } from '@/lib/date';
 import { formatCurrency, toNumberOrZero, toIntegerValue } from '@/lib/number';
 import { onboardingApiFetch } from '@/lib/onboarding-api';
+import {
+    isUnforeseenGuideCompleted,
+    markUnforeseenGuideCompleted,
+} from '@/lib/onboarding-session';
 import { calculateAmountTotal } from '@/lib/period-calculations';
 import type { OffIncomeItem, PeriodData } from '@/types/period';
 
@@ -69,7 +74,12 @@ export default function PeriodUnforeseen() {
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveTick, setSaveTick] = useState(0);
     const [showConfirmAllocate, setShowConfirmAllocate] = useState(false);
+    const [isUnforeseenGuideOpen, setIsUnforeseenGuideOpen] = useState(
+        () => isOnboardingMode && !isUnforeseenGuideCompleted(),
+    );
     const pendingSaveRef = useRef(false);
+    const allocateButtonRef = useRef<HTMLDivElement>(null);
+    const unforeseenBlockRef = useRef<HTMLDivElement>(null);
 
     const cacheKey = useMemo(
         () => `period:${viewerId ?? 'self'}:${periodId}`,
@@ -149,6 +159,25 @@ export default function PeriodUnforeseen() {
         )}`;
     }, [days, period.startDate, period.endDate]);
     const isReadOnly = period.isClosed || isViewerMode;
+    const unforeseenGuideSteps = useMemo<TourStep[]>(
+        () => [
+            {
+                stepId: 'unforeseen-allocate-change',
+                title: 'Шаг 1',
+                text: 'Нажмите чтобы указать сумму, которую готовы выделить на непредвиденные расходы.',
+                targetRef: allocateButtonRef,
+                placement: 'bottom',
+            },
+            {
+                stepId: 'unforeseen-expenses-block',
+                title: 'Шаг 2',
+                text: 'Здесь по ходу движения периода можете указывать трату и сумму. Все суммы будут вычетаться из отложенных на непредвиденные. Выделенные средства не используются в рассчёте доступных на день.',
+                targetRef: unforeseenBlockRef,
+                placement: 'top',
+            },
+        ],
+        [],
+    );
 
     const persist = async (
         nextAllocated = unforeseenAllocated,
@@ -452,13 +481,15 @@ export default function PeriodUnforeseen() {
                             <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <BlockTitle>План на непредвиденные</BlockTitle>
-                                    <PillButton
-                                        type="button"
-                                        onClick={handleAllocateClick}
-                                        disabled={isReadOnly}
-                                    >
-                                        Изменить
-                                    </PillButton>
+                                    <div ref={allocateButtonRef}>
+                                        <PillButton
+                                            type="button"
+                                            onClick={handleAllocateClick}
+                                            disabled={isReadOnly}
+                                        >
+                                            Изменить
+                                        </PillButton>
+                                    </div>
                                 </div>
                                 <BigDigit
                                     className={`mt-3 ${
@@ -493,6 +524,7 @@ export default function PeriodUnforeseen() {
                                     onBlurField={handleSave}
                                     onAfterDelete={requestSaveAfterChange}
                                     readOnly={isReadOnly}
+                                    containerRef={unforeseenBlockRef}
                                 />
                             </ExpenseSuggestionsProvider>
                         </div>
@@ -540,6 +572,17 @@ export default function PeriodUnforeseen() {
                     </div>
                 )}
             </div>
+            {isOnboardingMode && !isViewerMode && (
+                <OnboardingTour
+                    open={isUnforeseenGuideOpen}
+                    steps={unforeseenGuideSteps}
+                    refreshKey={`${unforeseenAllocated}:${unforeseenExpenses.length}`}
+                    onClose={() => {
+                        markUnforeseenGuideCompleted();
+                        setIsUnforeseenGuideOpen(false);
+                    }}
+                />
+            )}
         </AppLayout>
     );
 }

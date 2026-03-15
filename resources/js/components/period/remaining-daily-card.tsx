@@ -1,6 +1,6 @@
+import { BigDigit } from '@/components/big-digit';
 import { BlockDescriptionText } from '@/components/block-description-text';
 import { BlockTitle } from '@/components/block-title';
-import { BigDigit } from '@/components/big-digit';
 import { formatCurrency } from '@/lib/number';
 
 type RemainingDailyCardProps = {

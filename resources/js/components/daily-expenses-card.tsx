@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { PillButton } from '@/components/pill-button';
 import { BlockTitle } from '@/components/block-title';
+import { PillButton } from '@/components/pill-button';
 
 type DailyExpensesCardProps = {
     href: string;

@@ -96,6 +96,32 @@ export default function Login({
                                 {processing && <Spinner />}
                                 Log in
                             </Button>
+
+                            <div className="space-y-2">
+                                <p className="text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                    Или через
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <a
+                                        href="/auth/yandex/redirect"
+                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#FC3F1D]/45 bg-[#FC3F1D]/10 px-2 text-xs font-semibold text-foreground transition hover:border-[#FC3F1D]/80 hover:bg-[#FC3F1D]/18"
+                                    >
+                                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#FC3F1D] text-[9px] font-bold text-white">
+                                            Я
+                                        </span>
+                                        Yandex
+                                    </a>
+                                    <a
+                                        href="/auth/telegram/redirect"
+                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#2AABEE]/45 bg-[#2AABEE]/10 px-2 text-xs font-semibold text-foreground transition hover:border-[#2AABEE]/80 hover:bg-[#2AABEE]/18"
+                                    >
+                                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#2AABEE] text-[8px] font-bold text-white">
+                                            TG
+                                        </span>
+                                        Telegram
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
                         {canRegister && (

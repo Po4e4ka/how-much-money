@@ -1,5 +1,5 @@
 import { Form, Head, Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { FloatingInput } from '@/components/ui/floating-input';
@@ -10,6 +10,15 @@ import { store as loginStore } from '@/routes/login';
 import { email as passwordEmail } from '@/routes/password';
 import { store as registerStore } from '@/routes/register';
 import type { SharedData } from '@/types';
+
+const previewPhrases = [
+    'Финансовый контроль без хаоса',
+    'Планируй расходы на каждый день',
+    'Собирай периоды и держи баланс',
+    'Видь остаток и темп трат сразу',
+    'Фокус на целях, не на таблицах',
+];
+const PREVIEW_ROTATION_MS = 2500;
 
 export default function Welcome({
     canRegister = true,
@@ -23,6 +32,39 @@ export default function Welcome({
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
     const [forgotEmail, setForgotEmail] = useState('');
+    const [activePhraseIndex, setActivePhraseIndex] = useState(0);
+    const [leavingPhraseIndex, setLeavingPhraseIndex] = useState<number | null>(
+        null,
+    );
+    const leaveTimeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            setActivePhraseIndex((currentIndex) => {
+                setLeavingPhraseIndex(currentIndex);
+
+                return (currentIndex + 1) % previewPhrases.length;
+            });
+
+            if (leaveTimeoutRef.current !== null) {
+                window.clearTimeout(leaveTimeoutRef.current);
+            }
+
+            leaveTimeoutRef.current = window.setTimeout(() => {
+                setLeavingPhraseIndex(null);
+                leaveTimeoutRef.current = null;
+            }, 520);
+        }, PREVIEW_ROTATION_MS);
+
+        return () => {
+            window.clearInterval(interval);
+
+            if (leaveTimeoutRef.current !== null) {
+                window.clearTimeout(leaveTimeoutRef.current);
+                leaveTimeoutRef.current = null;
+            }
+        };
+    }, []);
 
     return (
         <>
@@ -33,6 +75,32 @@ export default function Welcome({
                     rel="stylesheet"
                 />
             </Head>
+            <style>{`
+                @keyframes hmm-phrase-in {
+                    from {
+                        opacity: 0;
+                        transform: translate3d(-38px, 0, 0);
+                        filter: blur(7px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translate3d(0, 0, 0);
+                        filter: blur(0);
+                    }
+                }
+                @keyframes hmm-phrase-out {
+                    from {
+                        opacity: 1;
+                        transform: translate3d(0, 0, 0);
+                        filter: blur(0);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translate3d(50px, 0, 0);
+                        filter: blur(8px);
+                    }
+                }
+            `}</style>
 
             <div className="relative min-h-screen overflow-hidden bg-[#0b0f14] font-body text-[#e9eef3]">
                 <div
@@ -56,11 +124,20 @@ export default function Welcome({
                                 </p>
                             </div>
 
-                            <h1 className="font-display text-4xl leading-tight sm:text-5xl">
-                                Планируй деньги
-                                <br />
-                                без перегруза
-                            </h1>
+                            <div className="relative h-[136px] overflow-hidden sm:h-[158px]">
+                                {leavingPhraseIndex !== null && (
+                                    <p className="absolute inset-0 font-display text-4xl leading-tight text-white sm:text-5xl animate-[hmm-phrase-out_520ms_ease-out_forwards]">
+                                        {previewPhrases[leavingPhraseIndex]}
+                                    </p>
+                                )}
+
+                                <p
+                                    key={activePhraseIndex}
+                                    className="absolute inset-0 font-display text-4xl leading-tight text-white sm:text-5xl animate-[hmm-phrase-in_520ms_ease-out_forwards]"
+                                >
+                                    {previewPhrases[activePhraseIndex]}
+                                </p>
+                            </div>
 
                             <p className="text-base text-white/70 sm:text-lg">
                                 Система стратегического планирования личных финансов. Приложение распределяет бюджет по периодам и формирует ежедневный ориентир расходов, сохраняя баланс между комфортом и дисциплиной.
@@ -289,6 +366,32 @@ export default function Welcome({
                                                                     )}
                                                                     Войти
                                                                 </Button>
+
+                                                                <div className="space-y-2">
+                                                                    <p className="text-center text-xs uppercase tracking-[0.18em] text-white/60">
+                                                                        Или через
+                                                                    </p>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <a
+                                                                            href="/auth/yandex/redirect"
+                                                                            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#FC3F1D]/45 bg-[#FC3F1D]/15 px-2 text-xs font-semibold text-white transition hover:border-[#FC3F1D]/80 hover:bg-[#FC3F1D]/22"
+                                                                        >
+                                                                            <span className="inline-flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#FC3F1D] text-[9px] font-bold text-white">
+                                                                                Я
+                                                                            </span>
+                                                                            Yandex
+                                                                        </a>
+                                                                        <a
+                                                                            href="/auth/telegram/redirect"
+                                                                            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#2AABEE]/45 bg-[#2AABEE]/15 px-2 text-xs font-semibold text-white transition hover:border-[#2AABEE]/80 hover:bg-[#2AABEE]/22"
+                                                                        >
+                                                                            <span className="inline-flex h-4 w-4 items-center justify-center rounded-[4px] bg-[#2AABEE] text-[8px] font-bold text-white">
+                                                                                TG
+                                                                            </span>
+                                                                            Telegram
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
 
                                                                 {canRegister && (
                                                                     <div className="pt-2 text-center lg:text-left">

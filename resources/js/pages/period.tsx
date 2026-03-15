@@ -136,6 +136,7 @@ export default function Period() {
     const guidedIncomeRowRef = useRef<HTMLDivElement>(null);
     const mandatoryBlockRef = useRef<HTMLDivElement>(null);
     const externalBlockRef = useRef<HTMLDivElement>(null);
+    const unforeseenCardRef = useRef<HTMLDivElement>(null);
 
     const cacheKey = useMemo(
         () => `period:${viewerId ?? 'self'}:${periodId}`,
@@ -279,9 +280,18 @@ export default function Period() {
             {
                 stepId: 'external-block',
                 title: 'Сторонние траты',
-                text: 'Здесь указываются траты, которые не включены в расчёт, но важно учитывать, что они были. Они не вычитаются из прихода.',
+                text: 'Здесь указываются траты, которые не включены в расчёт, но важно учитывать, что они были. Они не вычитаются из прихода. Их заполнение необязательно.',
                 targetRef: externalBlockRef,
                 placement: 'right',
+            },
+            {
+                stepId: 'unforeseen-open',
+                title: 'Непредвиденные расходы',
+                text: 'Здесь указывается сумма, которая выделена на непредвиденные расходы. Нажмите чтобы открыть страницу.',
+                targetRef: unforeseenCardRef,
+                placement: 'right',
+                captureClick: true,
+                hideNext: true,
             },
         ],
         [],
@@ -939,6 +949,13 @@ export default function Period() {
                             }
                             allocated={unforeseenAllocated}
                             spent={totalUnforeseenSpent}
+                            containerRef={unforeseenCardRef}
+                            onOpen={() => {
+                                if (isOnboardingMode && !isViewerMode) {
+                                    markPeriodGuideCompleted();
+                                    setIsPeriodGuideOpen(false);
+                                }
+                            }}
                         />
 
                         <ExpenseSuggestionsProvider

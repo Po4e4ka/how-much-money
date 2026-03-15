@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\UserInfoController;
 use App\Http\Controllers\ViewerController;
@@ -14,6 +15,18 @@ Route::get('/', function () {
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
+
+Route::prefix('auth')->name('auth.')->group(function () {
+    Route::get('yandex/redirect', [SocialAuthController::class, 'yandexRedirect'])
+        ->name('yandex.redirect');
+    Route::get('yandex/callback', [SocialAuthController::class, 'yandexCallback'])
+        ->name('yandex.callback');
+
+    Route::get('telegram/redirect', [SocialAuthController::class, 'telegramRedirect'])
+        ->name('telegram.redirect');
+    Route::match(['get', 'post'], 'telegram/callback', [SocialAuthController::class, 'telegramCallback'])
+        ->name('telegram.callback');
+});
 
 Route::get('onboarding', function () {
     return Inertia::render('onboarding');

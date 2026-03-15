@@ -2,6 +2,8 @@ const ONBOARDING_TOUR_COMPLETED_KEY = 'onboarding:tour:completed';
 const ONBOARDING_TOUR_STARTED_KEY = 'onboarding:tour:started';
 const ONBOARDING_PERIOD_GUIDE_COMPLETED_KEY =
     'onboarding:period-guide:completed';
+const ONBOARDING_UNFORESEEN_GUIDE_COMPLETED_KEY =
+    'onboarding:unforeseen-guide:completed';
 
 export const isTourCompleted = () => {
     if (typeof window === 'undefined') {
@@ -38,6 +40,7 @@ export const resetTourSession = () => {
     window.sessionStorage.removeItem(ONBOARDING_TOUR_STARTED_KEY);
     window.sessionStorage.removeItem(ONBOARDING_TOUR_COMPLETED_KEY);
     window.sessionStorage.removeItem(ONBOARDING_PERIOD_GUIDE_COMPLETED_KEY);
+    window.sessionStorage.removeItem(ONBOARDING_UNFORESEEN_GUIDE_COMPLETED_KEY);
 };
 
 export const isPeriodGuideCompleted = () => {
@@ -55,4 +58,25 @@ export const markPeriodGuideCompleted = () => {
         return;
     }
     window.sessionStorage.setItem(ONBOARDING_PERIOD_GUIDE_COMPLETED_KEY, '1');
+};
+
+export const isUnforeseenGuideCompleted = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+    return (
+        window.sessionStorage.getItem(
+            ONBOARDING_UNFORESEEN_GUIDE_COMPLETED_KEY,
+        ) === '1'
+    );
+};
+
+export const markUnforeseenGuideCompleted = () => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    window.sessionStorage.setItem(
+        ONBOARDING_UNFORESEEN_GUIDE_COMPLETED_KEY,
+        '1',
+    );
 };

@@ -1,14 +1,12 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem, SharedData } from '@/types';
 import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { PeriodList } from '@/components/period-list';
 import { SessionExpiredModal } from '@/components/session-expired-modal';
 import { UpdateInfoModal } from '@/components/update-info-modal';
-import { apiFetch, isApiError } from '@/lib/api';
+import AppLayout from '@/layouts/app-layout';
 import { delay } from '@/lib/animation';
+import { apiFetch, isApiError } from '@/lib/api';
 import {
     addMonthsClamp,
     calculateDaysInclusive,
@@ -17,6 +15,8 @@ import {
     formatMonthRange,
     isValidDate,
 } from '@/lib/date';
+import { dashboard } from '@/routes';
+import type { BreadcrumbItem, SharedData } from '@/types';
 import type { DashboardPeriodItem } from '@/types/period';
 
 const breadcrumbs: BreadcrumbItem[] = [

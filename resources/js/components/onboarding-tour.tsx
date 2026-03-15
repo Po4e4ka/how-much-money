@@ -53,9 +53,30 @@ type Viewport = {
 const PADDING = 10;
 const OVERLAY_Z = 80;
 const TOOLTIP_Z = 90;
+const TARGET_FOLLOW_TAU_MS = 42;
+const TARGET_SNAP_EPS = 0.4;
 
 const clamp = (value: number, min: number, max: number) =>
     Math.max(min, Math.min(max, value));
+
+const lerp = (from: number, to: number, progress: number) =>
+    from + (to - from) * progress;
+
+const interpolateRect = (from: Rect, to: Rect, progress: number): Rect => {
+    const top = lerp(from.top, to.top, progress);
+    const left = lerp(from.left, to.left, progress);
+    const width = lerp(from.width, to.width, progress);
+    const height = lerp(from.height, to.height, progress);
+
+    return {
+        top,
+        left,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+    };
+};
 
 const getRect = (element: HTMLElement): Rect => {
     const r = element.getBoundingClientRect();
@@ -166,7 +187,7 @@ export function OnboardingTour({
     refreshKey,
 }: OnboardingTourProps) {
     const [index, setIndex] = useState(0);
-    const [, setViewportTick] = useState(0);
+    const [viewportTick, setViewportTick] = useState(0);
     const [viewport, setViewport] = useState<Viewport>(() =>
         typeof window === 'undefined'
             ? { width: 1280, height: 720 }
@@ -180,32 +201,125 @@ export function OnboardingTour({
     const [measuredTargetRect, setMeasuredTargetRect] = useState<Rect | null>(
         null,
     );
+    const [animatedTargetRect, setAnimatedTargetRect] = useState<Rect | null>(
+        null,
+    );
     const tooltipRef = useRef<HTMLDivElement>(null);
     const maskId = useId().replace(/[:]/g, '_');
+    const animatedTargetRectRef = useRef<Rect | null>(null);
+    const measuredTargetRectRef = useRef<Rect | null>(null);
+    const followRafIdRef = useRef<number | null>(null);
+    const followPrevTsRef = useRef(0);
 
     const currentStep = steps[index] ?? null;
     const targetElement = currentStep?.targetRef.current;
-    const targetRect = open && isStepVisualReady ? measuredTargetRect : null;
+    const targetRect = open && isStepVisualReady ? animatedTargetRect : null;
 
     useEffect(() => {
         if (!open || !isStepVisualReady || !targetElement) {
             const timer = window.setTimeout(() => {
                 setMeasuredTargetRect(null);
             }, 0);
-            return () => window.clearTimeout(timer);
+
+            return () => {
+                window.clearTimeout(timer);
+            };
         }
 
         const measure = () => {
             setMeasuredTargetRect(getRect(targetElement));
         };
 
-        const t0 = window.setTimeout(measure, 0);
         const rafId = window.requestAnimationFrame(measure);
+        const lateTimer = window.setTimeout(measure, 16);
+
         return () => {
-            window.clearTimeout(t0);
             window.cancelAnimationFrame(rafId);
+            window.clearTimeout(lateTimer);
         };
-    }, [open, isStepVisualReady, targetElement, refreshKey]);
+    }, [open, isStepVisualReady, targetElement, refreshKey, viewportTick]);
+
+    useEffect(() => {
+        if (!open || !isStepVisualReady || !measuredTargetRect) {
+            const timer = window.setTimeout(() => {
+                measuredTargetRectRef.current = null;
+                if (followRafIdRef.current !== null) {
+                    window.cancelAnimationFrame(followRafIdRef.current);
+                    followRafIdRef.current = null;
+                }
+                animatedTargetRectRef.current = null;
+                setAnimatedTargetRect(null);
+            }, 0);
+
+            return () => window.clearTimeout(timer);
+        }
+
+        measuredTargetRectRef.current = measuredTargetRect;
+
+        if (!animatedTargetRectRef.current) {
+            const rafId = window.requestAnimationFrame(() => {
+                animatedTargetRectRef.current = measuredTargetRect;
+                setAnimatedTargetRect(measuredTargetRect);
+            });
+
+            return () => {
+                window.cancelAnimationFrame(rafId);
+            };
+        }
+
+        if (followRafIdRef.current !== null) {
+            return;
+        }
+
+        followPrevTsRef.current = performance.now();
+
+        const tick = (ts: number) => {
+            const target = measuredTargetRectRef.current;
+            const current = animatedTargetRectRef.current;
+
+            if (!target || !current) {
+                followRafIdRef.current = null;
+                return;
+            }
+
+            const dt = Math.max(1, ts - followPrevTsRef.current);
+            followPrevTsRef.current = ts;
+
+            const progress = 1 - Math.exp(-dt / TARGET_FOLLOW_TAU_MS);
+            let nextRect = interpolateRect(current, target, progress);
+
+            const remainingDistance =
+                Math.abs(target.top - nextRect.top) +
+                Math.abs(target.left - nextRect.left) +
+                Math.abs(target.width - nextRect.width) +
+                Math.abs(target.height - nextRect.height);
+
+            if (remainingDistance < TARGET_SNAP_EPS) {
+                nextRect = target;
+            }
+
+            animatedTargetRectRef.current = nextRect;
+            setAnimatedTargetRect(nextRect);
+
+            if (remainingDistance < TARGET_SNAP_EPS) {
+                followRafIdRef.current = null;
+                return;
+            }
+
+            followRafIdRef.current = window.requestAnimationFrame(tick);
+        };
+
+        followRafIdRef.current = window.requestAnimationFrame(tick);
+    }, [open, isStepVisualReady, measuredTargetRect]);
+
+    useEffect(() => {
+        return () => {
+            if (followRafIdRef.current !== null) {
+                window.cancelAnimationFrame(followRafIdRef.current);
+                followRafIdRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!open) {

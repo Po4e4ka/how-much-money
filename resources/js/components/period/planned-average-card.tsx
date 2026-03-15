@@ -1,6 +1,6 @@
+import { BigDigit } from '@/components/big-digit';
 import { BlockSepLine } from '@/components/block-sep-line';
 import { BlockTitle } from '@/components/block-title';
-import { BigDigit } from '@/components/big-digit';
 import { FormulaOp, FormulaRow, FormulaValue } from '@/components/formula';
 import { formatCurrency, formatSignedCurrency } from '@/lib/number';
 
