@@ -50,7 +50,8 @@ export const AutoSuggestInput = ({
     const applySuggestion = (name: string) => {
         onSelect(name);
         setHighlightIndex(0);
-        requestAnimationFrame(() => inputRef.current?.focus());
+        setIsFocused(false);
+        inputRef.current?.blur();
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -89,7 +90,7 @@ export const AutoSuggestInput = ({
             <div
                 className={`relative flex items-center rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs sm:px-4 sm:text-sm dark:border-white/10 dark:bg-white/10 ${containerClassName}`.trim()}
             >
-                {ghostSuffix && (
+                {isFocused && ghostSuffix && (
                     <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-[#6a5d52]/70 sm:left-4 dark:text-white/40">
                         <span className="invisible">{value}</span>
                         {ghostSuffix}

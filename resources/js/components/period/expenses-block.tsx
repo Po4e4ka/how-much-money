@@ -85,6 +85,10 @@ export const ExpensesBlock = ({
         </div>
         <div className="mt-3 grid gap-2">
             {items.map((item, index) => {
+                const usedNames = items
+                    .filter((entry) => entry.id !== item.id)
+                    .map((entry) => entry.name);
+
                 return (
                     <div
                         key={item.id}
@@ -98,6 +102,7 @@ export const ExpensesBlock = ({
                             value={item.name}
                             placeholder={`Трата ${index + 1}`}
                             disabled={readOnly}
+                            usedNames={usedNames}
                             onChange={(nextValue) =>
                                 setItems((prev) =>
                                     prev.map((expense) =>

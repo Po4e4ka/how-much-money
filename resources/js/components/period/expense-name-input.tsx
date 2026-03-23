@@ -7,6 +7,7 @@ type ExpenseNameInputProps = {
     placeholder: string;
     disabled?: boolean;
     containerClassName?: string;
+    usedNames?: string[];
     onChange: (value: string) => void;
     onBlur: () => void;
 };
@@ -18,12 +19,18 @@ export const ExpenseNameInput = ({
     placeholder,
     disabled = false,
     containerClassName,
+    usedNames = [],
     onChange,
     onBlur,
 }: ExpenseNameInputProps) => {
     const { previous, all, hideSuggestion } = useExpenseSuggestions();
 
     const suggestions = useMemo(() => {
+        const used = new Set(
+            usedNames
+                .map((name) => name.trim().toLowerCase())
+                .filter((name) => name.length > 0),
+        );
         const query = value.trim();
         const source = [...previous, ...all].filter(
             (name, index, array) =>
@@ -39,13 +46,16 @@ export const ExpenseNameInput = ({
         const normalized = query.toLowerCase();
         const filtered = source.filter((name) => {
             const lower = name.toLowerCase();
+            if (used.has(lower)) {
+                return false;
+            }
             if (normalized.length === 0) {
                 return true;
             }
             return lower.startsWith(normalized);
         });
         return filtered.slice(0, MAX_SUGGESTIONS);
-    }, [all, previous, value]);
+    }, [all, previous, usedNames, value]);
 
     return (
         <AutoSuggestInput
