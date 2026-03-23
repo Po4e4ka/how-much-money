@@ -173,6 +173,8 @@ Route::middleware(['auth', 'verified', 'api'])
             ->name('api.periods.close');
         Route::get('periods/{period}/expense-suggestions', [PeriodController::class, 'expenseSuggestions'])
             ->name('api.periods.expense-suggestions');
+        Route::delete('periods/{period}/expense-suggestions', [PeriodController::class, 'hideExpenseSuggestion'])
+            ->name('api.periods.expense-suggestions.hide');
         Route::put('periods/{period}', [PeriodController::class, 'update'])
             ->name('api.periods.update');
         Route::delete('periods/{period}', [PeriodController::class, 'destroy'])

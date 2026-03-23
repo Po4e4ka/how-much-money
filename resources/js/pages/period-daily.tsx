@@ -17,6 +17,7 @@ import {
     formatDateLabel,
     generateWeeklyBlocks,
 } from '@/lib/period-calculations';
+import { blurOnNumberInputWheel } from '@/lib/utils';
 import type { PeriodDailyData } from '@/types/period';
 
 const emptyPeriod: PeriodDailyData = {
@@ -71,9 +72,11 @@ export default function PeriodDaily() {
         if (typeof window === 'undefined') {
             return null;
         }
-        const store = (window as typeof window & {
-            __periodCache?: Record<string, PeriodDailyData>;
-        }).__periodCache;
+        const store = (
+            window as typeof window & {
+                __periodCache?: Record<string, PeriodDailyData>;
+            }
+        ).__periodCache;
         return store?.[cacheKey] ?? null;
     };
 
@@ -239,19 +242,19 @@ export default function PeriodDaily() {
             <Head title={`Ежедневные траты · ${periodTitle}`} />
             {isOnboardingMode && <OnboardingDemoBanner />}
             <div
-                className={`relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee] ${
+                className={`font-body relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 text-[#1c1a17] dark:text-[#f7f3ee] ${
                     isOnboardingMode ? 'pt-16' : ''
                 }`}
             >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
-                <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
+                <div className="bg-aurora pointer-events-none absolute inset-0 rounded-3xl opacity-35 dark:hidden" />
+                <div className="bg-aurora-night pointer-events-none absolute inset-0 hidden rounded-3xl opacity-45 dark:block" />
 
                 <section className="relative z-10 flex flex-wrap items-center justify-between gap-6">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                        <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                             Ежедневные траты
                         </p>
-                        <h1 className="mt-3 font-display text-3xl">
+                        <h1 className="font-display mt-3 text-3xl">
                             {periodTitle}
                         </h1>
                         <p className="mt-2 text-sm text-[#6a5d52] dark:text-white/70">
@@ -259,13 +262,13 @@ export default function PeriodDaily() {
                         </p>
                     </div>
                     <Link
-                            href={
-                                viewerId
-                                    ? `/shared/${viewerId}/periods/${periodId}`
-                                    : isOnboardingMode
-                                      ? `/onboarding/periods/${periodId}`
-                                      : `/periods/${periodId}`
-                            }
+                        href={
+                            viewerId
+                                ? `/shared/${viewerId}/periods/${periodId}`
+                                : isOnboardingMode
+                                  ? `/onboarding/periods/${periodId}`
+                                  : `/periods/${periodId}`
+                        }
                         prefetch
                         className="rounded-full border border-black/10 bg-white/80 px-4 py-2 text-xs text-[#1c1a17] shadow-[0_16px_32px_-24px_rgba(28,26,23,0.6)] transition hover:-translate-y-0.5 dark:border-white/10 dark:bg-white/10 dark:text-white"
                     >
@@ -284,7 +287,7 @@ export default function PeriodDaily() {
                 )}
 
                 <section
-                    className="relative z-10 grid gap-4 animate-reveal"
+                    className="animate-reveal relative z-10 grid gap-4"
                     style={delay(120)}
                 >
                     {isLoading && (
@@ -297,7 +300,7 @@ export default function PeriodDaily() {
                             {loadError}
                         </div>
                     )}
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-sm:snap-y max-sm:snap-mandatory max-sm:overflow-y-auto max-sm:max-h-[calc(100vh-190px)] max-sm:pb-8 max-sm:pr-1">
+                    <div className="grid gap-4 max-sm:max-h-[calc(100vh-190px)] max-sm:snap-y max-sm:snap-mandatory max-sm:overflow-y-auto max-sm:pr-1 max-sm:pb-8 sm:grid-cols-2 lg:grid-cols-3">
                         {weeklyBlocks.map((block, index) => {
                             const isLast = index === weeklyBlocks.length - 1;
                             const { total: blockTotal, average: blockAverage } =
@@ -306,7 +309,7 @@ export default function PeriodDaily() {
                             return (
                                 <div
                                     key={`${block[0]?.toISOString() ?? index}`}
-                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] dark:border-white/10 dark:bg-white/10 max-sm:min-h-[calc(100vh-315px)] max-sm:snap-start max-sm:mb-2 max-sm:p-3 ${
+                                    className={`rounded-2xl border border-black/10 bg-white/80 p-4 text-sm shadow-[0_18px_36px_-26px_rgba(28,26,23,0.5)] max-sm:mb-2 max-sm:min-h-[calc(100vh-315px)] max-sm:snap-start max-sm:p-3 dark:border-white/10 dark:bg-white/10 ${
                                         isLast ? 'max-sm:mb-24' : ''
                                     }`}
                                 >
@@ -314,7 +317,8 @@ export default function PeriodDaily() {
                                         <div className="flex-1">
                                             <div className="grid gap-3 max-sm:gap-2">
                                                 {block.map((date) => {
-                                                    const key = formatDateKey(date);
+                                                    const key =
+                                                        formatDateKey(date);
                                                     return (
                                                         <div
                                                             key={key}
@@ -337,6 +341,9 @@ export default function PeriodDaily() {
                                                                 }
                                                                 disabled={
                                                                     isReadOnly
+                                                                }
+                                                                onWheel={
+                                                                    blurOnNumberInputWheel
                                                                 }
                                                                 onChange={(
                                                                     event,
@@ -395,17 +402,19 @@ export default function PeriodDaily() {
                                                                         );
                                                                     }
                                                                 }}
-                                                                onBlur={handleSave}
-                                                                className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-sm text-right tabular-nums dark:border-white/10 dark:bg-white/10 max-sm:w-[70%] max-sm:px-2 max-sm:py-2 max-sm:text-xs"
+                                                                onBlur={
+                                                                    handleSave
+                                                                }
+                                                                className="no-spin rounded-2xl border border-black/10 bg-white/90 px-3 py-2 text-right text-sm tabular-nums max-sm:w-[70%] max-sm:px-2 max-sm:py-2 max-sm:text-xs dark:border-white/10 dark:bg-white/10"
                                                             />
                                                         </div>
                                                     );
                                                 })}
                                             </div>
                                         </div>
-                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/5 max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:items-center max-sm:gap-y-1 max-sm:px-2 max-sm:py-2">
+                                        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-black/10 bg-white/70 px-3 py-2 text-xs max-sm:grid max-sm:grid-cols-[1fr_auto] max-sm:items-center max-sm:gap-y-1 max-sm:px-2 max-sm:py-2 dark:border-white/10 dark:bg-white/5">
                                             <span>Итого за неделю</span>
-                                            <span className="font-display text-sm tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                                            <span className="font-display text-sm text-[#b0352b] tabular-nums dark:text-[#ff8b7c]">
                                                 {formatCurrency(blockTotal)}
                                             </span>
                                             <span className="text-[#6a5d52] dark:text-white/60">

@@ -7,7 +7,6 @@ type ExpenseNameInputProps = {
     placeholder: string;
     disabled?: boolean;
     containerClassName?: string;
-    usedNames?: string[];
     onChange: (value: string) => void;
     onBlur: () => void;
 };
@@ -19,19 +18,20 @@ export const ExpenseNameInput = ({
     placeholder,
     disabled = false,
     containerClassName,
-    usedNames = [],
     onChange,
     onBlur,
 }: ExpenseNameInputProps) => {
-    const { previous, all } = useExpenseSuggestions();
+    const { previous, all, hideSuggestion } = useExpenseSuggestions();
 
     const suggestions = useMemo(() => {
         const query = value.trim();
-        const source = query.length > 0 ? all : previous;
-        const used = new Set(
-            usedNames
-                .map((name) => name.trim().toLowerCase())
-                .filter((name) => name.length > 0),
+        const source = [...previous, ...all].filter(
+            (name, index, array) =>
+                array.findIndex(
+                    (candidate) =>
+                        candidate.trim().toLowerCase() ===
+                        name.trim().toLowerCase(),
+                ) === index,
         );
         if (source.length === 0) {
             return [];
@@ -39,16 +39,13 @@ export const ExpenseNameInput = ({
         const normalized = query.toLowerCase();
         const filtered = source.filter((name) => {
             const lower = name.toLowerCase();
-            if (used.has(lower)) {
-                return false;
-            }
             if (normalized.length === 0) {
                 return true;
             }
             return lower.startsWith(normalized);
         });
         return filtered.slice(0, MAX_SUGGESTIONS);
-    }, [all, previous, usedNames, value]);
+    }, [all, previous, value]);
 
     return (
         <AutoSuggestInput
@@ -61,6 +58,13 @@ export const ExpenseNameInput = ({
             onBlur={onBlur}
             header="Подсказки"
             containerClassName={containerClassName}
+            onRemoveSuggestion={
+                disabled
+                    ? undefined
+                    : (name) => {
+                          void hideSuggestion(name);
+                      }
+            }
         />
     );
 };

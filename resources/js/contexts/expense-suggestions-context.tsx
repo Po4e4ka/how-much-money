@@ -5,13 +5,13 @@ import { apiFetch } from '@/lib/api';
 type ExpenseSuggestionsState = {
     previous: string[];
     all: string[];
+    hideSuggestion: (name: string) => Promise<void>;
 };
 
 type ExpenseSuggestionsContextValue = ExpenseSuggestionsState;
 
-const ExpenseSuggestionsContext = createContext<ExpenseSuggestionsContextValue | null>(
-    null,
-);
+const ExpenseSuggestionsContext =
+    createContext<ExpenseSuggestionsContextValue | null>(null);
 
 type ExpenseSuggestionsProviderProps = {
     periodId: string;
@@ -31,12 +31,14 @@ export const ExpenseSuggestionsProvider = ({
     const [suggestions, setSuggestions] = useState<ExpenseSuggestionsState>({
         previous: [],
         all: [],
+        hideSuggestion: async () => {},
     });
 
     const disabledValue = useMemo(
         () => ({
             previous: [],
             all: [],
+            hideSuggestion: async () => {},
         }),
         [],
     );
@@ -47,6 +49,43 @@ export const ExpenseSuggestionsProvider = ({
         }
 
         const controller = new AbortController();
+        const hideSuggestion = async (name: string) => {
+            const params = new URLSearchParams();
+            if (viewerId) {
+                params.set('viewer_id', viewerId.toString());
+            }
+
+            await apiFetch(
+                `/api/periods/${periodId}/expense-suggestions${
+                    params.size > 0 ? `?${params.toString()}` : ''
+                }`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type,
+                        name,
+                    }),
+                },
+            );
+
+            setSuggestions((prev) => {
+                const suggestionKey = name.trim().toLowerCase();
+
+                return {
+                    ...prev,
+                    previous: prev.previous.filter(
+                        (item) => item.trim().toLowerCase() !== suggestionKey,
+                    ),
+                    all: prev.all.filter(
+                        (item) => item.trim().toLowerCase() !== suggestionKey,
+                    ),
+                };
+            });
+        };
+
         const fetchSuggestions = async () => {
             try {
                 const params = new URLSearchParams({ type });
@@ -62,6 +101,7 @@ export const ExpenseSuggestionsProvider = ({
                 setSuggestions({
                     previous: payload.data?.previous ?? [],
                     all: payload.data?.all ?? [],
+                    hideSuggestion,
                 });
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') {
@@ -97,6 +137,7 @@ export const useExpenseSuggestions = () => {
         value ?? {
             previous: [],
             all: [],
+            hideSuggestion: async () => {},
         }
     );
 };

@@ -6,8 +6,8 @@ use App\Models\Expense;
 use App\Models\Period;
 use App\Models\Viewer;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PeriodController extends Controller
 {
@@ -100,7 +100,7 @@ class PeriodController extends Controller
             ->map(function ($expense) {
                 return [
                     'id' => $expense->id,
-                    'name' => $expense->name,
+                    'name' => $expense->display_name,
                     'amount' => $expense->pivot->actual_amount,
                 ];
             })
@@ -111,7 +111,7 @@ class PeriodController extends Controller
             ->map(function ($expense) {
                 return [
                     'id' => $expense->id,
-                    'name' => $expense->name,
+                    'name' => $expense->display_name,
                     'planned_amount' => $expense->pivot->planned_amount,
                     'actual_amount' => $expense->pivot->actual_amount,
                 ];
@@ -123,7 +123,7 @@ class PeriodController extends Controller
             ->map(function ($expense) {
                 return [
                     'id' => $expense->id,
-                    'name' => $expense->name,
+                    'name' => $expense->display_name,
                     'amount' => $expense->pivot->actual_amount,
                 ];
             })
@@ -134,7 +134,7 @@ class PeriodController extends Controller
             ->map(function ($expense) {
                 return [
                     'id' => $expense->id,
-                    'name' => $expense->name,
+                    'name' => $expense->display_name,
                     'planned_amount' => $expense->pivot->planned_amount,
                     'actual_amount' => $expense->pivot->actual_amount,
                 ];
@@ -175,25 +175,25 @@ class PeriodController extends Controller
 
         $previousNames = [];
         if ($previousPeriod) {
-            $previousNames = $previousPeriod->expenses()
+            $previousNames = $this->normalizeSuggestionNames($previousPeriod->expenses()
                 ->whereIn('expenses.type', $types)
+                ->wherePivot('exclude_from_suggestions', false)
                 ->select('expenses.name')
-                ->distinct()
                 ->orderBy('expenses.name')
                 ->pluck('expenses.name')
-                ->all();
+                ->all());
         }
 
-        $allNames = Expense::query()
+        $allNames = $this->normalizeSuggestionNames(Expense::query()
             ->select('expenses.name')
             ->join('period_expense', 'expenses.id', '=', 'period_expense.expense_id')
             ->join('periods', 'periods.id', '=', 'period_expense.period_id')
             ->where('periods.user_id', $userId)
+            ->where('period_expense.exclude_from_suggestions', false)
             ->whereIn('expenses.type', $types)
-            ->distinct()
             ->orderBy('expenses.name')
             ->pluck('expenses.name')
-            ->all();
+            ->all());
 
         return response()->json([
             'data' => [
@@ -201,6 +201,48 @@ class PeriodController extends Controller
                 'all' => $allNames,
             ],
         ]);
+    }
+
+    public function hideExpenseSuggestion(Request $request, Period $period)
+    {
+        if ($request->query('viewer_id') !== null) {
+            abort(403);
+        }
+
+        $userId = $this->resolveOwnerId($request, $period);
+
+        $data = $request->validate([
+            'type' => ['required', 'string', 'in:income,mandatory,external,unforeseen'],
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $expenseIds = $this->findExpenseIdsByDisplayName(
+            $data['type'],
+            $data['name'],
+        );
+
+        if ($expenseIds === []) {
+            return response()->noContent();
+        }
+
+        $periodIds = Period::query()
+            ->where('user_id', $userId)
+            ->pluck('id')
+            ->all();
+
+        if ($periodIds === []) {
+            return response()->noContent();
+        }
+
+        DB::table('period_expense')
+            ->whereIn('period_id', $periodIds)
+            ->whereIn('expense_id', $expenseIds)
+            ->update([
+                'exclude_from_suggestions' => true,
+                'updated_at' => now(),
+            ]);
+
+        return response()->noContent();
     }
 
     public function store(Request $request)
@@ -530,37 +572,42 @@ class PeriodController extends Controller
 
     private function syncExpensesByType(Period $period, array $items, string $type, callable $pivotResolver): void
     {
+        $submittedIds = collect($items)
+            ->pluck('id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $existingById = Expense::query()
+            ->whereIn('id', $submittedIds)
+            ->where('type', $type)
+            ->get()
+            ->keyBy('id');
+
+        $usedStoredNames = [];
         $expenseIds = [];
 
         foreach ($items as $item) {
-            $name = $item['name'];
-            $expense = null;
+            $displayName = trim($item['name']);
+            $existingExpense = ! empty($item['id'])
+                ? $existingById->get((int) $item['id'])
+                : null;
+            $storedName = $this->resolveStoredExpenseName(
+                $displayName,
+                $existingExpense,
+                $usedStoredNames,
+            );
+            $expense = $this->resolveExpenseForSync(
+                $type,
+                $storedName,
+                $existingExpense,
+            );
 
-            if (!empty($item['id'])) {
-                $expense = Expense::query()->find($item['id']);
-            }
-
-            $sameNameAndType = Expense::query()
-                ->where('name', $name)
-                ->where('type', $type)
-                ->first();
-
-            if (!$expense) {
-                $expense = $sameNameAndType ?? Expense::create([
-                    'name' => $name,
-                    'type' => $type,
-                ]);
-            } else {
-                if ($sameNameAndType && $sameNameAndType->id !== $expense->id) {
-                    $expense = $sameNameAndType;
-                } else {
-                    $expense->name = $name;
-                    $expense->type = $type;
-                    $expense->save();
-                }
-            }
-
-            $expenseIds[$expense->id] = $pivotResolver($item);
+            $usedStoredNames[Expense::storageKey($storedName)] = true;
+            $expenseIds[$expense->id] = [
+                ...$pivotResolver($item),
+                'exclude_from_suggestions' => false,
+            ];
         }
 
         $existingIds = $period->expenses()
@@ -578,6 +625,83 @@ class PeriodController extends Controller
                 $expenseId => $pivot,
             ]);
         }
+    }
+
+    private function normalizeSuggestionNames(array $storedNames): array
+    {
+        return collect($storedNames)
+            ->map(fn ($name) => Expense::displayName((string) $name))
+            ->filter(fn ($name) => trim($name) !== '')
+            ->unique(fn ($name) => Expense::displayKey($name))
+            ->sortBy(fn ($name) => mb_strtolower($name), SORT_NATURAL)
+            ->values()
+            ->all();
+    }
+
+    private function resolveStoredExpenseName(
+        string $displayName,
+        ?Expense $existingExpense,
+        array $usedStoredNames,
+    ): string {
+        if (
+            $existingExpense &&
+            Expense::displayKey($existingExpense->name) === Expense::displayKey($displayName) &&
+            ! isset($usedStoredNames[Expense::storageKey($existingExpense->name)])
+        ) {
+            return $existingExpense->name;
+        }
+
+        $duplicateIndex = 0;
+        do {
+            $storedName = Expense::storageName($displayName, $duplicateIndex);
+            $duplicateIndex++;
+        } while (isset($usedStoredNames[Expense::storageKey($storedName)]));
+
+        return $storedName;
+    }
+
+    private function resolveExpenseForSync(
+        string $type,
+        string $storedName,
+        ?Expense $existingExpense,
+    ): Expense {
+        $matchingExpense = Expense::query()
+            ->where('name', $storedName)
+            ->where('type', $type)
+            ->first();
+
+        if ($matchingExpense) {
+            return $matchingExpense;
+        }
+
+        if ($existingExpense) {
+            $existingExpense->name = $storedName;
+            $existingExpense->type = $type;
+            $existingExpense->save();
+
+            return $existingExpense;
+        }
+
+        return Expense::create([
+            'name' => $storedName,
+            'type' => $type,
+        ]);
+    }
+
+    private function findExpenseIdsByDisplayName(string $type, string $displayName): array
+    {
+        $normalizedDisplayName = Expense::displayKey($displayName);
+
+        return Expense::query()
+            ->select(['id', 'name'])
+            ->where('type', $type)
+            ->get()
+            ->filter(
+                fn (Expense $expense) => Expense::displayKey($expense->name) === $normalizedDisplayName,
+            )
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     private function hasAllDailyExpenses(Period $period): bool

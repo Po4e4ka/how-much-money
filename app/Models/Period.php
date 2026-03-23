@@ -55,7 +55,7 @@ class Period extends Model
     public function expenses(): BelongsToMany
     {
         return $this->belongsToMany(Expense::class, 'period_expense')
-            ->withPivot(['planned_amount', 'actual_amount'])
+            ->withPivot(['planned_amount', 'actual_amount', 'exclude_from_suggestions'])
             ->withTimestamps();
     }
 }

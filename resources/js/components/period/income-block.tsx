@@ -2,6 +2,7 @@ import { BlockTitle } from '@/components/block-title';
 import { ExpenseNameInput } from '@/components/period/expense-name-input';
 import { PillButton } from '@/components/pill-button';
 import { formatCurrency, toIntegerValue } from '@/lib/number';
+import { blurOnNumberInputWheel } from '@/lib/utils';
 import type { IncomeBlockProps } from '@/types/period';
 
 export const IncomeBlock = ({
@@ -28,7 +29,11 @@ export const IncomeBlock = ({
             <BlockTitle>Приход</BlockTitle>
             <div className="flex items-center gap-2">
                 <div ref={addRowTargetRef}>
-                    <PillButton type="button" onClick={onAdd} disabled={readOnly}>
+                    <PillButton
+                        type="button"
+                        onClick={onAdd}
+                        disabled={readOnly}
+                    >
                         + Строка
                     </PillButton>
                 </div>
@@ -44,7 +49,7 @@ export const IncomeBlock = ({
             </div>
         </div>
         <div
-            className={`mt-3 hidden items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60 sm:grid ${
+            className={`mt-3 hidden items-center gap-2 text-[11px] tracking-[0.2em] text-[#6a5d52] uppercase sm:grid dark:text-white/60 ${
                 showDelete
                     ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
                     : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
@@ -56,115 +61,114 @@ export const IncomeBlock = ({
         </div>
         <div className="mt-3 grid gap-2">
             {items.map((item, index) => {
-                const usedNames = items
-                    .filter((entry) => entry.id !== item.id)
-                    .map((entry) => entry.name);
                 return (
-                <div
-                    key={item.id}
-                    ref={
-                        guidedIncomeId && item.id === guidedIncomeId
-                            ? guidedRowTargetRef
-                            : undefined
-                    }
-                    className={`grid items-center gap-2 ${
-                        showDelete
-                            ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
-                            : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
-                    }`}
-                >
-                    <ExpenseNameInput
-                        value={item.name}
-                        placeholder={`Приход ${index + 1}`}
-                        disabled={readOnly}
-                        usedNames={usedNames}
-                        onChange={(nextValue) =>
-                            setItems((prev) =>
-                                prev.map((income) =>
-                                    income.id === item.id
-                                        ? {
-                                              ...income,
-                                              name: nextValue,
-                                          }
-                                        : income,
-                                ),
-                            )
+                    <div
+                        key={item.id}
+                        ref={
+                            guidedIncomeId && item.id === guidedIncomeId
+                                ? guidedRowTargetRef
+                                : undefined
                         }
-                        onBlur={onBlurField}
-                        containerClassName={
-                            invalidNameIds.includes(item.id)
-                                ? 'border-[#b0352b] dark:border-[#ff8b7c]'
-                                : ''
-                        }
-                    />
-                    <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        inputMode="numeric"
-                        value={item.amount}
-                        disabled={readOnly}
-                        onChange={(event) => {
-                            const nextValue = event.target.value;
-                            setItems((prev) =>
-                                prev.map((income) =>
-                                    income.id === item.id
-                                        ? {
-                                              ...income,
-                                              amount:
-                                                  toIntegerValue(nextValue),
-                                          }
-                                        : income,
-                                ),
-                            );
-                        }}
-                        onFocus={() => {
-                            if (item.amount === 0) {
+                        className={`grid items-center gap-2 ${
+                            showDelete
+                                ? 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_auto]'
+                                : 'grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)]'
+                        }`}
+                    >
+                        <ExpenseNameInput
+                            value={item.name}
+                            placeholder={`Приход ${index + 1}`}
+                            disabled={readOnly}
+                            onChange={(nextValue) =>
                                 setItems((prev) =>
                                     prev.map((income) =>
                                         income.id === item.id
-                                            ? { ...income, amount: '' }
+                                            ? {
+                                                  ...income,
+                                                  name: nextValue,
+                                              }
                                             : income,
                                     ),
-                                );
+                                )
                             }
-                        }}
-                        onBlur={() => {
-                            if (item.amount === '') {
+                            onBlur={onBlurField}
+                            containerClassName={
+                                invalidNameIds.includes(item.id)
+                                    ? 'border-[#b0352b] dark:border-[#ff8b7c]'
+                                    : ''
+                            }
+                        />
+                        <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            value={item.amount}
+                            disabled={readOnly}
+                            onWheel={blurOnNumberInputWheel}
+                            onChange={(event) => {
+                                const nextValue = event.target.value;
                                 setItems((prev) =>
                                     prev.map((income) =>
                                         income.id === item.id
-                                            ? { ...income, amount: 0 }
+                                            ? {
+                                                  ...income,
+                                                  amount: toIntegerValue(
+                                                      nextValue,
+                                                  ),
+                                              }
                                             : income,
                                     ),
                                 );
-                            }
-                            onBlurField();
-                        }}
-                        className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs text-right tabular-nums dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm"
-                    />
-                    {showDelete && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (window.confirm('Удалить строку?')) {
+                            }}
+                            onFocus={() => {
+                                if (item.amount === 0) {
                                     setItems((prev) =>
-                                        prev.filter(
-                                            (income) => income.id !== item.id,
+                                        prev.map((income) =>
+                                            income.id === item.id
+                                                ? { ...income, amount: '' }
+                                                : income,
                                         ),
                                     );
-                                    onAfterDelete();
                                 }
                             }}
-                            aria-label={`Удалить приход ${index + 1}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-xs text-[#b0352b] transition hover:bg-[#b0352b]/10 dark:text-[#ff8b7c] dark:hover:bg-[#ff8b7c]/15"
-                            disabled={readOnly}
-                        >
-                            —
-                        </button>
-                    )}
-                </div>
-            );
+                            onBlur={() => {
+                                if (item.amount === '') {
+                                    setItems((prev) =>
+                                        prev.map((income) =>
+                                            income.id === item.id
+                                                ? { ...income, amount: 0 }
+                                                : income,
+                                        ),
+                                    );
+                                }
+                                onBlurField();
+                            }}
+                            className="no-spin rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-right text-xs tabular-nums sm:px-4 sm:text-sm dark:border-white/10 dark:bg-white/10"
+                        />
+                        {showDelete && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm('Удалить строку?')) {
+                                        setItems((prev) =>
+                                            prev.filter(
+                                                (income) =>
+                                                    income.id !== item.id,
+                                            ),
+                                        );
+                                        onAfterDelete();
+                                    }
+                                }}
+                                aria-label={`Удалить приход ${index + 1}`}
+                                className="flex h-8 w-8 items-center justify-center rounded-full text-xs text-[#b0352b] transition hover:bg-[#b0352b]/10 dark:text-[#ff8b7c] dark:hover:bg-[#ff8b7c]/15"
+                                disabled={readOnly}
+                            >
+                                —
+                            </button>
+                        )}
+                    </div>
+                );
             })}
         </div>
         <div
@@ -175,7 +179,7 @@ export const IncomeBlock = ({
             }`}
         >
             <span>Итого прихода</span>
-            <span className="text-right font-display text-sm tabular-nums">
+            <span className="font-display text-right text-sm tabular-nums">
                 {formatCurrency(totalAmount)}
             </span>
             {showDelete && <span />}

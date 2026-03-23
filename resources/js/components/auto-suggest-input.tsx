@@ -12,6 +12,7 @@ type AutoSuggestInputProps = {
     className?: string;
     containerClassName?: string;
     inputClassName?: string;
+    onRemoveSuggestion?: (value: string) => void;
 };
 
 export const AutoSuggestInput = ({
@@ -26,6 +27,7 @@ export const AutoSuggestInput = ({
     className = '',
     containerClassName = '',
     inputClassName = '',
+    onRemoveSuggestion,
 }: AutoSuggestInputProps) => {
     const [isFocused, setIsFocused] = useState(false);
     const [highlightIndex, setHighlightIndex] = useState(0);
@@ -85,10 +87,10 @@ export const AutoSuggestInput = ({
     return (
         <div className={`relative ${className}`.trim()}>
             <div
-                className={`relative flex items-center rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:px-4 sm:text-sm ${containerClassName}`.trim()}
+                className={`relative flex items-center rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs sm:px-4 sm:text-sm dark:border-white/10 dark:bg-white/10 ${containerClassName}`.trim()}
             >
                 {ghostSuffix && (
-                    <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-[#6a5d52]/70 dark:text-white/40 sm:left-4">
+                    <span className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-[#6a5d52]/70 sm:left-4 dark:text-white/40">
                         <span className="invisible">{value}</span>
                         {ghostSuffix}
                     </span>
@@ -112,34 +114,53 @@ export const AutoSuggestInput = ({
                         setIsFocused(false);
                         onBlur();
                     }}
-                    className={`relative z-20 w-full bg-transparent text-xs outline-none placeholder:text-[#6a5d52]/60 disabled:cursor-not-allowed disabled:opacity-70 dark:text-white dark:placeholder:text-white/40 sm:text-sm ${inputClassName}`.trim()}
+                    className={`relative z-20 w-full bg-transparent text-xs outline-none placeholder:text-[#6a5d52]/60 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm dark:text-white dark:placeholder:text-white/40 ${inputClassName}`.trim()}
                 />
             </div>
             {shouldShowSuggestions && (
                 <div
-                    className="absolute left-0 right-0 z-30 mt-1"
+                    className="absolute right-0 left-0 z-30 mt-1"
                     onMouseDown={(event) => event.preventDefault()}
                 >
                     <div className="rounded-lg border border-black/10 bg-white/95 p-2 text-xs shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] backdrop-blur dark:border-white/10 dark:bg-[#1f1b17]/95">
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
+                        <div className="px-2 py-1 text-[10px] tracking-[0.2em] text-[#6a5d52] uppercase dark:text-white/60">
                             {header}
                         </div>
                         <div className="flex flex-wrap gap-2 px-2 pb-2">
                             {suggestions.map((name, index) => (
-                                <button
+                                <div
                                     key={name}
-                                    type="button"
-                                    onClick={() => applySuggestion(name)}
-                                    onMouseEnter={() => setHighlightIndex(index)}
+                                    onMouseEnter={() =>
+                                        setHighlightIndex(index)
+                                    }
                                     className={[
-                                        'rounded-full border px-3 py-1 text-[11px] font-medium transition',
+                                        'inline-flex items-center rounded-full border text-[11px] font-medium transition',
                                         index === highlightIndex
                                             ? 'border-black/20 bg-black/10 text-[#1c1a17] dark:border-white/30 dark:bg-white/10 dark:text-white'
                                             : 'border-black/10 bg-black/5 text-[#1c1a17] hover:bg-black/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10',
                                     ].join(' ')}
                                 >
-                                    {name}
-                                </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => applySuggestion(name)}
+                                        className="px-3 py-1"
+                                    >
+                                        {name}
+                                    </button>
+                                    {onRemoveSuggestion && (
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onRemoveSuggestion(name);
+                                            }}
+                                            aria-label={`Больше не подсказывать ${name}`}
+                                            className="rounded-r-full px-2 py-1 text-[10px] text-[#6a5d52] transition hover:bg-black/10 hover:text-[#1c1a17] dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+                                        >
+                                            x
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </div>
