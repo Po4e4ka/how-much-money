@@ -33,6 +33,11 @@ services:
       - "traefik.http.routers.hmm-www.middlewares=hmm-www-redirect"
       - "traefik.http.routers.hmm-www.service=noop@internal"
 
+      - "traefik.http.routers.hmm-www-web.rule=Host(`www.how-much-money.ru`)"
+      - "traefik.http.routers.hmm-www-web.entrypoints=web"
+      - "traefik.http.routers.hmm-www-web.middlewares=hmm-www-redirect"
+      - "traefik.http.routers.hmm-www-web.service=noop@internal"
+
       - "traefik.http.middlewares.hmm-www-redirect.redirectregex.regex=^https?://www\\.how-much-money\\.ru/?(.*)"
       - "traefik.http.middlewares.hmm-www-redirect.redirectregex.replacement=https://how-much-money.ru/$${1}"
       - "traefik.http.middlewares.hmm-www-redirect.redirectregex.permanent=true"
