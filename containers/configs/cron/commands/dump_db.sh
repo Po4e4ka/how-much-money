@@ -7,8 +7,14 @@ set +a
 
 DATE_TAG="$(date +%d-%m-%y)"
 OUT_FILE="/shared/database.sqlite"
+TELEGRAM_PROXY_URL="${TELEGRAM_PROXY_URL:-}"
 
-curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+curl_proxy_args=()
+if [[ -n "${TELEGRAM_PROXY_URL}" ]]; then
+  curl_proxy_args=(--proxy "${TELEGRAM_PROXY_URL}")
+fi
+
+curl "${curl_proxy_args[@]}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
   -H "Content-Type: multipart/form-data" \
   -F "chat_id=${TELEGRAM_DATABASE_CHAT_ID}" \
   -F "document=@${OUT_FILE}" \
