@@ -29,6 +29,9 @@ jobs:
       TEST_DEPLOY_DIR: ${{ vars.TEST_DEPLOY_DIR }}
       TEST_BASIC_AUTH: ${{ secrets.TEST_BASIC_AUTH }}
       TEST_HEALTHCHECK_AUTH: ${{ secrets.TEST_HEALTHCHECK_AUTH }}
+      TEST_PROXY_HOST: ${{ vars.TEST_PROXY_HOST }}
+      TEST_PROXY_USERNAME: ${{ secrets.TEST_PROXY_USERNAME }}
+      TEST_PROXY_PASSWORD: ${{ secrets.TEST_PROXY_PASSWORD }}
 
     steps:
       - name: Checkout test branch
