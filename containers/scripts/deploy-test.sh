@@ -190,11 +190,19 @@ docker compose -f docker-compose-test.yaml run --rm --no-deps \
   --entrypoint composer \
   hmm-test install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Build Vite assets in an isolated Node container.
+# Wayfinder normally invokes PHP from the Vite process. Generate its files in
+# the PHP image first, then let the Node-only container build with generation
+# disabled so the frontend build does not require PHP inside the Node image.
+docker compose -f docker-compose-test.yaml run --rm --no-deps \
+  --user 0 \
+  --entrypoint php \
+  hmm-test artisan wayfinder:generate --with-form
+
 docker run --rm \
   -e HTTP_PROXY="${HTTP_PROXY}" \
   -e HTTPS_PROXY="${HTTPS_PROXY}" \
   -e NO_PROXY="${NO_PROXY}" \
+  -e SKIP_WAYFINDER=1 \
   -v "${TEST_DEPLOY_DIR}:/app" \
   -w /app \
   node:22-bookworm-slim \
