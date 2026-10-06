@@ -130,7 +130,8 @@ if [[ ! -f "${TEST_DB_PATH}" ]]; then
   exit 1
 fi
 
-chown 1000:1000 "${TEST_DB_PATH}"
+chown 1000:1000 "${TEST_DB_DIR}" "${TEST_DB_PATH}"
+chmod 0770 "${TEST_DB_DIR}"
 chmod 0660 "${TEST_DB_PATH}"
 
 # Apply schema changes from the test image to the copied production database.
