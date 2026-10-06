@@ -39,6 +39,4 @@ RUN mkdir -p \
         /var/www/bootstrap/cache \
         /var/www/storage
 
-USER unit
-
 CMD ["unitd", "--no-daemon", "--control", "unix:/var/run/control.unit.sock"]
