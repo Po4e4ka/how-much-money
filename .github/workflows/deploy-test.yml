@@ -1,0 +1,46 @@
+name: deploy test
+
+on:
+  push:
+    branches:
+      - test
+
+concurrency:
+  group: test-environment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy test environment
+    runs-on:
+      - self-hosted
+      - linux
+      - how-much-money
+    environment:
+      name: test
+      url: https://test.how-much-money.ru
+    timeout-minutes: 30
+    env:
+      PROD_DB_PATH: ${{ vars.PROD_DB_PATH }}
+      PROD_ENV_PATH: ${{ vars.PROD_ENV_PATH }}
+      TEST_DEPLOY_DIR: ${{ vars.TEST_DEPLOY_DIR }}
+      TEST_BASIC_AUTH: ${{ secrets.TEST_BASIC_AUTH }}
+      TEST_HEALTHCHECK_AUTH: ${{ secrets.TEST_HEALTHCHECK_AUTH }}
+
+    steps:
+      - name: Checkout test branch
+        uses: actions/checkout@v6
+
+      - name: Verify runner dependencies
+        run: |
+          set -euo pipefail
+          docker version
+          docker compose version
+          rsync --version | head -n 1
+          curl --version | head -n 1
+
+      - name: Deploy test environment
+        run: bash containers/scripts/deploy-test.sh
