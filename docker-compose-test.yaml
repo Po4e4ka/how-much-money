@@ -1,22 +1,11 @@
 services:
   hmm-test:
     container_name: hmm-test
-    image: hmm-test:${HMM_TEST_IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: containers/prod.Dockerfile
-      args:
-        USER_ID: 1000
-        GROUP_ID: 1000
-        USER_NAME: unit
+    image: ${HMM_TEST_IMAGE:?HMM_TEST_IMAGE must be set}
     env_file:
       - .env.test
     volumes:
-      - ./:/var/www
-      - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
-      - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
       - ./var/test/database.sqlite:/var/db/database.sqlite
-    entrypoint: /docker-entrypoint.d/entrypoint.sh
     command:
       - unitd
       - --no-daemon

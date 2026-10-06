@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+: "${HMM_TEST_IMAGE:?HMM_TEST_IMAGE must point to the immutable GHCR image}"
 : "${PROD_DB_PATH:?PROD_DB_PATH must point to the production SQLite database}"
 : "${PROD_ENV_PATH:?PROD_ENV_PATH must point to the production .env file}"
 : "${TEST_DEPLOY_DIR:?TEST_DEPLOY_DIR must point to the persistent test deployment directory}"
 : "${TEST_BASIC_AUTH:?TEST_BASIC_AUTH must contain a Traefik basic-auth htpasswd entry}"
-: "${TEST_PROXY_HOST:?TEST_PROXY_HOST must contain the proxy URL, for example https://171.22.119.96:8443}"
-: "${TEST_PROXY_USERNAME:?TEST_PROXY_USERNAME must be set}"
-: "${TEST_PROXY_PASSWORD:?TEST_PROXY_PASSWORD must be set}"
+: "${TEST_HEALTHCHECK_AUTH:?TEST_HEALTHCHECK_AUTH must be user:password}"
 
 SOURCE_DIR="${GITHUB_WORKSPACE:-$(pwd)}"
-IMAGE_TAG="${GITHUB_SHA:-local}"
 TEST_DB_DIR="${TEST_DEPLOY_DIR}/var/test"
 TEST_DB_PATH="${TEST_DB_DIR}/database.sqlite"
+TEST_DB_NEXT="${TEST_DB_DIR}/database.sqlite.next"
 
 for path_var in PROD_DB_PATH PROD_ENV_PATH TEST_DEPLOY_DIR; do
   path_value="${!path_var}"
@@ -23,6 +22,8 @@ for path_var in PROD_DB_PATH PROD_ENV_PATH TEST_DEPLOY_DIR; do
 done
 
 PROD_DIR="$(realpath -m "$(dirname "${PROD_ENV_PATH}")")"
+PROD_DB_DIR="$(realpath -m "$(dirname "${PROD_DB_PATH}")")"
+PROD_DB_NAME="$(basename "${PROD_DB_PATH}")"
 TEST_DIR_REAL="$(realpath -m "${TEST_DEPLOY_DIR}")"
 SOURCE_DIR_REAL="$(realpath -m "${SOURCE_DIR}")"
 
@@ -48,49 +49,9 @@ if [[ ! -f "${PROD_ENV_PATH}" ]]; then
 fi
 
 mkdir -p "${TEST_DEPLOY_DIR}" "${TEST_DB_DIR}"
-
-# Keep runtime data out of the source sync. The deployment directory is stable,
-# unlike the GitHub Actions checkout directory used by a self-hosted runner.
-rsync -a --delete \
-  --exclude='.git/' \
-  --exclude='.env' \
-  --exclude='.env.test' \
-  --exclude='node_modules/' \
-  --exclude='vendor/' \
-  --exclude='var/' \
-  "${SOURCE_DIR}/" "${TEST_DEPLOY_DIR}/"
-
+cp "${SOURCE_DIR}/docker-compose-test.yaml" "${TEST_DEPLOY_DIR}/docker-compose-test.yaml"
 cp "${PROD_ENV_PATH}" "${TEST_DEPLOY_DIR}/.env.test"
 chmod 600 "${TEST_DEPLOY_DIR}/.env.test"
-
-# The application container runs as UID/GID 1000. The deployment tree itself
-# may stay root-owned, but Composer/Laravel need a few writable bind-mounted
-# directories at runtime.
-mkdir -p \
-  "${TEST_DEPLOY_DIR}/vendor" \
-  "${TEST_DEPLOY_DIR}/bootstrap/cache" \
-  "${TEST_DEPLOY_DIR}/storage/framework/cache/data" \
-  "${TEST_DEPLOY_DIR}/storage/framework/sessions" \
-  "${TEST_DEPLOY_DIR}/storage/framework/views" \
-  "${TEST_DEPLOY_DIR}/storage/logs"
-
-chown -R 1000:1000 \
-  "${TEST_DEPLOY_DIR}/vendor" \
-  "${TEST_DEPLOY_DIR}/bootstrap/cache" \
-  "${TEST_DEPLOY_DIR}/storage"
-
-# Keep production-derived secrets and database snapshots out of the Docker
-# build context. The runtime mounts them explicitly instead.
-cat > "${TEST_DEPLOY_DIR}/.dockerignore" <<'EOF'
-.git
-.env
-.env.*
-node_modules
-vendor
-var/test
-database.sqlite
-*.sqlite
-EOF
 
 set_env() {
   local key="$1"
@@ -115,140 +76,71 @@ set_env YANDEX_REDIRECT_URI '"https://test.how-much-money.ru/auth/yandex/callbac
 
 cd "${TEST_DEPLOY_DIR}"
 
-export HMM_TEST_IMAGE_TAG="${IMAGE_TAG}"
+export HMM_TEST_IMAGE
 export TEST_BASIC_AUTH
 
-# Build an authenticated proxy URL without printing credentials. URL-encoding is
-# required so passwords containing @, :, #, etc. remain valid in the URL.
-PROXY_URL="$(
-  TEST_PROXY_HOST="${TEST_PROXY_HOST}" \
-  TEST_PROXY_USERNAME="${TEST_PROXY_USERNAME}" \
-  TEST_PROXY_PASSWORD="${TEST_PROXY_PASSWORD}" \
-  python3 - <<'PY'
-import os
-from urllib.parse import quote, urlsplit, urlunsplit
+# The image is built on GitHub-hosted infrastructure. The VPS only pulls the
+# immutable artifact and performs lightweight runtime deployment steps.
+docker pull "${HMM_TEST_IMAGE}"
 
-raw = os.environ["TEST_PROXY_HOST"]
-if "://" not in raw:
-    raw = "https://" + raw
-
-parts = urlsplit(raw)
-user = quote(os.environ["TEST_PROXY_USERNAME"], safe="")
-password = quote(os.environ["TEST_PROXY_PASSWORD"], safe="")
-netloc = f"{user}:{password}@{parts.hostname}"
-if parts.port:
-    netloc += f":{parts.port}"
-
-print(urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment)))
-PY
-)"
-
-export HTTP_PROXY="${PROXY_URL}"
-export HTTPS_PROXY="${PROXY_URL}"
-export http_proxy="${PROXY_URL}"
-export https_proxy="${PROXY_URL}"
-export NO_PROXY="localhost,127.0.0.1,::1,test.how-much-money.ru,how-much-money.ru"
-export no_proxy="${NO_PROXY}"
-
-pull_image() {
-  local image="$1"
-
-  for attempt in 1 2 3 4; do
-    echo "Pulling ${image} (attempt ${attempt}/4)..."
-    if timeout 180 docker pull "${image}"; then
-      return 0
-    fi
-
-    if [[ "${attempt}" -lt 4 ]]; then
-      sleep $((attempt * 10))
-    fi
-  done
-
-  echo "Failed to pull ${image} after 4 attempts" >&2
-  return 1
-}
-
-# Pull external build/runtime images explicitly with retries. Docker Hub/CDN can
-# occasionally time out on a self-hosted runner; once cached, the build should
-# not force another pull.
-pull_image unit:php8.4
-pull_image composer:latest
-pull_image node:22-bookworm-slim
-
-# Build the same PHP/Unit runtime used by production, but with a distinct image tag.
-docker compose -f docker-compose-test.yaml build \
-  --build-arg HTTP_PROXY="${HTTP_PROXY}" \
-  --build-arg HTTPS_PROXY="${HTTPS_PROXY}" \
-  --build-arg NO_PROXY="${NO_PROXY}" \
-  hmm-test
-
-# Install runtime PHP dependencies into the persistent deployment directory.
-docker compose -f docker-compose-test.yaml run --rm --no-deps \
-  -e HTTP_PROXY="${HTTP_PROXY}" \
-  -e HTTPS_PROXY="${HTTPS_PROXY}" \
-  -e NO_PROXY="${NO_PROXY}" \
-  --entrypoint composer \
-  hmm-test install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
-# Wayfinder normally invokes PHP from the Vite process. Generate its files in
-# the PHP image first, then let the Node-only container build with generation
-# disabled so the frontend build does not require PHP inside the Node image.
-docker compose -f docker-compose-test.yaml run --rm --no-deps \
-  --user 0 \
-  --entrypoint php \
-  hmm-test artisan wayfinder:generate --with-form
-
+# Create a consistent SQLite snapshot. Mount the production database directory
+# read-only so SQLite can also see -wal/-shm sidecar files when WAL mode is used.
+rm -f "${TEST_DB_NEXT}"
 docker run --rm \
-  -e HTTP_PROXY="${HTTP_PROXY}" \
-  -e HTTPS_PROXY="${HTTPS_PROXY}" \
-  -e NO_PROXY="${NO_PROXY}" \
-  -e SKIP_WAYFINDER=1 \
-  -v "${TEST_DEPLOY_DIR}:/app" \
-  -w /app \
-  node:22-bookworm-slim \
-  sh -lc 'npm ci && npm run build'
-rm -rf "${TEST_DEPLOY_DIR}/node_modules"
-
-# Create a transactionally consistent SQLite snapshot rather than copying a live
-# database file byte-for-byte (which is unsafe when WAL/journaling is active).
-rm -f "${TEST_DB_PATH}"
-touch "${TEST_DB_PATH}"
-chmod 0666 "${TEST_DB_PATH}"
-docker compose -f docker-compose-test.yaml run --rm --no-deps \
-  -v "${PROD_DB_PATH}:/source/database.sqlite:ro" \
+  --user 0 \
+  -e PROD_DB_NAME="${PROD_DB_NAME}" \
+  -v "${PROD_DB_DIR}:/source:ro" \
+  -v "${TEST_DB_DIR}:/target" \
   --entrypoint php \
-  hmm-test -r '
-    $src = new SQLite3("/source/database.sqlite", SQLITE3_OPEN_READONLY);
-    $dst = new SQLite3("/var/db/database.sqlite");
+  "${HMM_TEST_IMAGE}" \
+  -r '
+    $source = "/source/" . getenv("PROD_DB_NAME");
+    $target = "/target/database.sqlite.next";
+
+    if (file_exists($target)) {
+        unlink($target);
+    }
+
+    $src = new SQLite3($source, SQLITE3_OPEN_READONLY);
+    $dst = new SQLite3($target);
+
     if (!$src->backup($dst)) {
         fwrite(STDERR, "SQLite backup failed\n");
         exit(1);
     }
+
     $dst->close();
     $src->close();
   '
 
-# Make the copied database writable only by the application user/group.
-docker compose -f docker-compose-test.yaml run --rm --no-deps \
-  --user 0 \
-  --entrypoint sh \
-  hmm-test -lc 'chown unit:unit /var/db/database.sqlite && chmod 0660 /var/db/database.sqlite'
+mv -f "${TEST_DB_NEXT}" "${TEST_DB_PATH}"
+chown 1000:1000 "${TEST_DB_PATH}"
+chmod 0660 "${TEST_DB_PATH}"
 
-# Apply schema changes from the test branch to the copied database only.
+# Apply schema changes from the test image to the copied production database.
 docker compose -f docker-compose-test.yaml run --rm --no-deps \
   --entrypoint php \
   hmm-test artisan migrate --force
 
-# Replace the running test application with the newly built revision.
+# Recreate the web container on the immutable image from this exact commit.
 docker compose -f docker-compose-test.yaml up -d --remove-orphans hmm-test
 
-# Fail the deployment if Traefik cannot serve the new version.
+# Verify that Traefik serves the new deployment through Basic Auth.
 for attempt in $(seq 1 20); do
   if curl --fail --silent --show-error \
-      --user "${TEST_HEALTHCHECK_AUTH:?TEST_HEALTHCHECK_AUTH must be user:password}" \
+      --user "${TEST_HEALTHCHECK_AUTH}" \
       --max-time 10 \
       https://test.how-much-money.ru/ >/dev/null; then
     echo "Test deployment is healthy: https://test.how-much-money.ru"
+
+    # The VPS has little disk space; remove old, unused SHA-tagged test images.
+    image_repo="${HMM_TEST_IMAGE%:*}"
+    while read -r image_ref; do
+      [[ -z "${image_ref}" || "${image_ref}" == "${HMM_TEST_IMAGE}" ]] && continue
+      docker image rm "${image_ref}" >/dev/null 2>&1 || true
+    done < <(docker images "${image_repo}" --format '{{.Repository}}:{{.Tag}}')
+
+    docker image prune -f >/dev/null 2>&1 || true
     exit 0
   fi
   sleep 3

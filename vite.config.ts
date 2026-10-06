@@ -18,13 +18,9 @@ export default defineConfig({
             },
         }),
         tailwindcss(),
-        ...(process.env.SKIP_WAYFINDER === '1'
-            ? []
-            : [
-                  wayfinder({
-                      formVariants: true,
-                  }),
-              ]),
+        wayfinder({
+            formVariants: true,
+        }),
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
