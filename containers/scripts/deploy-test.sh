@@ -63,6 +63,22 @@ rsync -a --delete \
 cp "${PROD_ENV_PATH}" "${TEST_DEPLOY_DIR}/.env.test"
 chmod 600 "${TEST_DEPLOY_DIR}/.env.test"
 
+# The application container runs as UID/GID 1000. The deployment tree itself
+# may stay root-owned, but Composer/Laravel need a few writable bind-mounted
+# directories at runtime.
+mkdir -p \
+  "${TEST_DEPLOY_DIR}/vendor" \
+  "${TEST_DEPLOY_DIR}/bootstrap/cache" \
+  "${TEST_DEPLOY_DIR}/storage/framework/cache/data" \
+  "${TEST_DEPLOY_DIR}/storage/framework/sessions" \
+  "${TEST_DEPLOY_DIR}/storage/framework/views" \
+  "${TEST_DEPLOY_DIR}/storage/logs"
+
+chown -R 1000:1000 \
+  "${TEST_DEPLOY_DIR}/vendor" \
+  "${TEST_DEPLOY_DIR}/bootstrap/cache" \
+  "${TEST_DEPLOY_DIR}/storage"
+
 # Keep production-derived secrets and database snapshots out of the Docker
 # build context. The runtime mounts them explicitly instead.
 cat > "${TEST_DEPLOY_DIR}/.dockerignore" <<'EOF'
