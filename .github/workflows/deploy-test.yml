@@ -94,7 +94,7 @@ jobs:
       name: test
       url: https://test.how-much-money.ru
     env:
-      HMM_TEST_IMAGE: ${{ env.TEST_IMAGE_REPOSITORY }}:${{ github.sha }}
+      HMM_TEST_IMAGE: ghcr.io/po4e4ka/how-much-money-test:${{ github.sha }}
       PROD_DB_PATH: ${{ vars.PROD_DB_PATH }}
       PROD_ENV_PATH: ${{ vars.PROD_ENV_PATH }}
       TEST_DEPLOY_DIR: ${{ vars.TEST_DEPLOY_DIR }}
