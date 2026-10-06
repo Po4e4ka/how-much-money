@@ -32,6 +32,16 @@
     {
       "match": {
         "uri": [
+          "/build/*"
+        ]
+      },
+      "action": {
+        "share": "/var/www/public$uri"
+      }
+    },
+    {
+      "match": {
+        "uri": [
           "/assets/*",
           "/static/*"
         ]

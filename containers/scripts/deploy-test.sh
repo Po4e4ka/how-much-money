@@ -83,6 +83,12 @@ export TEST_BASIC_AUTH
 # immutable artifact and performs lightweight runtime deployment steps.
 docker pull "${HMM_TEST_IMAGE}"
 
+# Fail early if the immutable image does not actually contain the Vite build.
+docker run --rm \
+  --entrypoint sh \
+  "${HMM_TEST_IMAGE}" \
+  -lc 'test -f /var/www/public/build/manifest.json && test -d /var/www/public/build/assets'
+
 # Create a consistent SQLite snapshot. Mount the production database directory
 # read-only so SQLite can also see -wal/-shm sidecar files when WAL mode is used.
 rm -f "${TEST_DB_NEXT}"
@@ -147,7 +153,11 @@ for attempt in $(seq 1 20); do
   if curl --fail --silent --show-error \
       --user "${TEST_HEALTHCHECK_AUTH}" \
       --max-time 10 \
-      https://test.how-much-money.ru/ >/dev/null; then
+      https://test.how-much-money.ru/ >/dev/null \
+    && curl --fail --silent --show-error \
+      --user "${TEST_HEALTHCHECK_AUTH}" \
+      --max-time 10 \
+      https://test.how-much-money.ru/build/manifest.webmanifest >/dev/null; then
     echo "Test deployment is healthy: https://test.how-much-money.ru"
 
     # The VPS has little disk space; remove old, unused SHA-tagged test images.
