@@ -34,8 +34,6 @@ COPY --chown=unit:unit ./composer.* ./
 RUN chown unit:unit /var/www/
 RUN chown -R unit:unit /var/lib/unit /var/run/ /home/unit
 
-# Изменение группы 20 чтобы работало на macOS
-RUN groupmod -g 31 dialout
 
 ARG USER_ID
 ARG GROUP_ID
