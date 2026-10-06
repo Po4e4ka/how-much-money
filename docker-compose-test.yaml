@@ -1,0 +1,45 @@
+services:
+  hmm-test:
+    container_name: hmm-test
+    image: hmm-test:${HMM_TEST_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: containers/prod.Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
+        USER_NAME: unit
+    env_file:
+      - .env.test
+    volumes:
+      - ./:/var/www
+      - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
+      - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
+      - ./var/test/database.sqlite:/var/db/database.sqlite
+    entrypoint: /docker-entrypoint.d/entrypoint.sh
+    command:
+      - unitd
+      - --no-daemon
+      - --control
+      - unix:/var/run/control.unit.sock
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.hmm-test.rule=Host(`test.how-much-money.ru`)
+      - traefik.http.routers.hmm-test.entrypoints=websecure
+      - traefik.http.routers.hmm-test.tls.certresolver=letsencrypt
+      - traefik.http.routers.hmm-test.middlewares=hmm-test-auth
+      - traefik.http.middlewares.hmm-test-auth.basicauth.users=${TEST_BASIC_AUTH:?TEST_BASIC_AUTH must be set}
+      - traefik.http.services.hmm-test.loadbalancer.server.port=80
+    networks:
+      - web
+      - hmm_test_net
+    restart: unless-stopped
+
+networks:
+  web:
+    external: true
+  hmm_test_net:
+    name: hmm_test_net
