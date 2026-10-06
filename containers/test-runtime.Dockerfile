@@ -6,12 +6,9 @@ LABEL org.opencontainers.image.description="How Much Money test runtime image"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libicu-dev \
-        libsqlite3-dev \
         libzip-dev \
     && pecl install redis \
     && docker-php-ext-install \
-        sqlite3 \
-        pdo_sqlite \
         zip \
         pcntl \
         intl \
