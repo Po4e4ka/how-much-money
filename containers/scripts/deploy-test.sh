@@ -113,7 +113,23 @@ docker run --rm \
     $src->close();
   '
 
+# A failed/early Compose run can leave database.sqlite as a directory when the
+# bind source did not exist yet. Preserve that unexpected path for inspection,
+# then replace it with the fresh snapshot file.
+if [[ -d "${TEST_DB_PATH}" ]]; then
+  invalid_path="${TEST_DB_PATH}.invalid-$(date +%s)"
+  echo "database.sqlite is a directory; moving it aside to ${invalid_path}" >&2
+  mv "${TEST_DB_PATH}" "${invalid_path}"
+fi
+
 mv -f "${TEST_DB_NEXT}" "${TEST_DB_PATH}"
+
+if [[ ! -f "${TEST_DB_PATH}" ]]; then
+  echo "Test database snapshot is not a regular file: ${TEST_DB_PATH}" >&2
+  ls -ld "${TEST_DB_PATH}" >&2 || true
+  exit 1
+fi
+
 chown 1000:1000 "${TEST_DB_PATH}"
 chmod 0660 "${TEST_DB_PATH}"
 
