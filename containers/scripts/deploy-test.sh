@@ -54,7 +54,7 @@ rsync -a --delete \
   --exclude='.env.test' \
   --exclude='node_modules/' \
   --exclude='vendor/' \
-  --exclude='var/test/' \
+  --exclude='var/' \
   "${SOURCE_DIR}/" "${TEST_DEPLOY_DIR}/"
 
 cp "${PROD_ENV_PATH}" "${TEST_DEPLOY_DIR}/.env.test"
@@ -99,8 +99,33 @@ cd "${TEST_DEPLOY_DIR}"
 export HMM_TEST_IMAGE_TAG="${IMAGE_TAG}"
 export TEST_BASIC_AUTH
 
+pull_image() {
+  local image="$1"
+
+  for attempt in 1 2 3 4; do
+    echo "Pulling ${image} (attempt ${attempt}/4)..."
+    if timeout 180 docker pull "${image}"; then
+      return 0
+    fi
+
+    if [[ "${attempt}" -lt 4 ]]; then
+      sleep $((attempt * 10))
+    fi
+  done
+
+  echo "Failed to pull ${image} after 4 attempts" >&2
+  return 1
+}
+
+# Pull external build/runtime images explicitly with retries. Docker Hub/CDN can
+# occasionally time out on a self-hosted runner; once cached, the build should
+# not force another pull.
+pull_image unit:php8.4
+pull_image composer:latest
+pull_image node:22-bookworm-slim
+
 # Build the same PHP/Unit runtime used by production, but with a distinct image tag.
-docker compose -f docker-compose-test.yaml build --pull hmm-test
+docker compose -f docker-compose-test.yaml build hmm-test
 
 # Install runtime PHP dependencies into the persistent deployment directory.
 docker compose -f docker-compose-test.yaml run --rm --no-deps \
