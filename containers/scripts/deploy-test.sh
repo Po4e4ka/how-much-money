@@ -5,6 +5,9 @@ set -Eeuo pipefail
 : "${PROD_ENV_PATH:?PROD_ENV_PATH must point to the production .env file}"
 : "${TEST_DEPLOY_DIR:?TEST_DEPLOY_DIR must point to the persistent test deployment directory}"
 : "${TEST_BASIC_AUTH:?TEST_BASIC_AUTH must contain a Traefik basic-auth htpasswd entry}"
+: "${TEST_PROXY_HOST:?TEST_PROXY_HOST must contain the proxy URL, for example https://171.22.119.96:8443}"
+: "${TEST_PROXY_USERNAME:?TEST_PROXY_USERNAME must be set}"
+: "${TEST_PROXY_PASSWORD:?TEST_PROXY_PASSWORD must be set}"
 
 SOURCE_DIR="${GITHUB_WORKSPACE:-$(pwd)}"
 IMAGE_TAG="${GITHUB_SHA:-local}"
@@ -54,7 +57,7 @@ rsync -a --delete \
   --exclude='.env.test' \
   --exclude='node_modules/' \
   --exclude='vendor/' \
-  --exclude='var/test/' \
+  --exclude='var/' \
   "${SOURCE_DIR}/" "${TEST_DEPLOY_DIR}/"
 
 cp "${PROD_ENV_PATH}" "${TEST_DEPLOY_DIR}/.env.test"
@@ -99,16 +102,83 @@ cd "${TEST_DEPLOY_DIR}"
 export HMM_TEST_IMAGE_TAG="${IMAGE_TAG}"
 export TEST_BASIC_AUTH
 
+# Build an authenticated proxy URL without printing credentials. URL-encoding is
+# required so passwords containing @, :, #, etc. remain valid in the URL.
+PROXY_URL="$(
+  TEST_PROXY_HOST="${TEST_PROXY_HOST}" \
+  TEST_PROXY_USERNAME="${TEST_PROXY_USERNAME}" \
+  TEST_PROXY_PASSWORD="${TEST_PROXY_PASSWORD}" \
+  python3 - <<'PY'
+import os
+from urllib.parse import quote, urlsplit, urlunsplit
+
+raw = os.environ["TEST_PROXY_HOST"]
+if "://" not in raw:
+    raw = "https://" + raw
+
+parts = urlsplit(raw)
+user = quote(os.environ["TEST_PROXY_USERNAME"], safe="")
+password = quote(os.environ["TEST_PROXY_PASSWORD"], safe="")
+netloc = f"{user}:{password}@{parts.hostname}"
+if parts.port:
+    netloc += f":{parts.port}"
+
+print(urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment)))
+PY
+)"
+
+export HTTP_PROXY="${PROXY_URL}"
+export HTTPS_PROXY="${PROXY_URL}"
+export http_proxy="${PROXY_URL}"
+export https_proxy="${PROXY_URL}"
+export NO_PROXY="localhost,127.0.0.1,::1,test.how-much-money.ru,how-much-money.ru"
+export no_proxy="${NO_PROXY}"
+
+pull_image() {
+  local image="$1"
+
+  for attempt in 1 2 3 4; do
+    echo "Pulling ${image} (attempt ${attempt}/4)..."
+    if timeout 180 docker pull "${image}"; then
+      return 0
+    fi
+
+    if [[ "${attempt}" -lt 4 ]]; then
+      sleep $((attempt * 10))
+    fi
+  done
+
+  echo "Failed to pull ${image} after 4 attempts" >&2
+  return 1
+}
+
+# Pull external build/runtime images explicitly with retries. Docker Hub/CDN can
+# occasionally time out on a self-hosted runner; once cached, the build should
+# not force another pull.
+pull_image unit:php8.4
+pull_image composer:latest
+pull_image node:22-bookworm-slim
+
 # Build the same PHP/Unit runtime used by production, but with a distinct image tag.
-docker compose -f docker-compose-test.yaml build --pull hmm-test
+docker compose -f docker-compose-test.yaml build \
+  --build-arg HTTP_PROXY="${HTTP_PROXY}" \
+  --build-arg HTTPS_PROXY="${HTTPS_PROXY}" \
+  --build-arg NO_PROXY="${NO_PROXY}" \
+  hmm-test
 
 # Install runtime PHP dependencies into the persistent deployment directory.
 docker compose -f docker-compose-test.yaml run --rm --no-deps \
+  -e HTTP_PROXY="${HTTP_PROXY}" \
+  -e HTTPS_PROXY="${HTTPS_PROXY}" \
+  -e NO_PROXY="${NO_PROXY}" \
   --entrypoint composer \
   hmm-test install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Build Vite assets in an isolated Node container.
 docker run --rm \
+  -e HTTP_PROXY="${HTTP_PROXY}" \
+  -e HTTPS_PROXY="${HTTPS_PROXY}" \
+  -e NO_PROXY="${NO_PROXY}" \
   -v "${TEST_DEPLOY_DIR}:/app" \
   -w /app \
   node:22-bookworm-slim \
