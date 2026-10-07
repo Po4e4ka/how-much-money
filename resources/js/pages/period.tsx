@@ -638,7 +638,7 @@ export default function Period() {
         setSaveError(null);
         try {
             const payload = await requestFetch<{
-                data?: { is_closed?: boolean };
+                data?: { is_closed?: boolean; is_pinned?: boolean };
             }>(
                 `/api/periods/${periodId}/close${viewerQuery ? `?${viewerQuery}` : ''}`,
                 {
@@ -647,6 +647,7 @@ export default function Period() {
             );
             const updated = {
                 ...period,
+                isPinned: payload.data?.is_pinned ?? false,
                 isClosed: payload.data?.is_closed ?? true,
             };
             setPeriod(updated);
@@ -661,7 +662,7 @@ export default function Period() {
                 unforeseenAllocated,
                 offIncomeExpenses,
                 dailyExpenses,
-                isPinned: period.isPinned,
+                isPinned: updated.isPinned,
                 isClosed: updated.isClosed,
             });
         } catch (err) {
@@ -825,7 +826,9 @@ export default function Period() {
                                 {period.isPinned ? 'Открепить' : 'Закрепить'}
                             </PillButton>
                         )}
-                        {!isViewerMode && isDailyComplete && !period.isClosed && (
+                        {!isViewerMode &&
+                            (period.isPinned || isDailyComplete) &&
+                            !period.isClosed && (
                             <PillButton
                                 type="button"
                                 onClick={() => setShowCloseModal(true)}
