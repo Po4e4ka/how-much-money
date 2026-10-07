@@ -467,23 +467,26 @@ class PeriodController extends Controller
             return response()->json([
                 'data' => [
                     'is_closed' => true,
+                    'is_pinned' => (bool) $period->is_pinned,
                     'actual_remaining' => $this->calculateActualRemaining($period),
                 ],
             ]);
         }
 
-        if (! $this->hasAllDailyExpenses($period)) {
+        if (! $period->is_pinned && ! $this->hasAllDailyExpenses($period)) {
             return response()->json([
                 'message' => 'Заполните ежедневные траты за все дни периода.',
             ], 422);
         }
 
         $period->is_closed = true;
+        $period->is_pinned = false;
         $period->save();
 
         return response()->json([
             'data' => [
                 'is_closed' => true,
+                'is_pinned' => false,
                 'actual_remaining' => $this->calculateActualRemaining($period),
             ],
         ]);
