@@ -123,6 +123,7 @@ jobs:
           docker version
           docker compose version
           curl --version | head -n 1
+          python3 --version
 
       - name: Deploy test image
         run: bash containers/scripts/deploy-test.sh

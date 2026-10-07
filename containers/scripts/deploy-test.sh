@@ -68,6 +68,7 @@ set_env() {
 set_env APP_ENV test
 set_env APP_DEBUG false
 set_env APP_URL https://test.how-much-money.ru
+set_env ASSET_URL https://test.how-much-money.ru
 set_env DB_CONNECTION sqlite
 set_env DB_DATABASE /var/db/database.sqlite
 set_env SESSION_DOMAIN test.how-much-money.ru
@@ -149,12 +150,55 @@ docker compose -f docker-compose-test.yaml run --rm --no-deps \
 # Recreate the web container on the immutable image from this exact commit.
 docker compose -f docker-compose-test.yaml up -d --remove-orphans hmm-test
 
+# Verify the rendered page uses this environment's assets and authenticated manifest.
+healthcheck_html="$(mktemp)"
+trap 'rm -f "${healthcheck_html}"' EXIT
+verify_page_assets() {
+  python3 - "${healthcheck_html}" <<'PY_CHECK'
+import sys
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlsplit
+
+origin = "https://test.how-much-money.ru"
+class PageAssets(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.assets = []
+        self.manifest = False
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "script" and attrs.get("type") == "module" and attrs.get("src"):
+            self.assets.append(attrs["src"])
+        if tag == "link":
+            rel = attrs.get("rel", "").split()
+            if any(r in rel for r in ["stylesheet", "modulepreload"]):
+                href = attrs.get("href", "")
+                if "/build/" in href:
+                    self.assets.append(href)
+            if "manifest" in rel:
+                self.manifest = attrs.get("crossorigin") == "use-credentials"
+parser = PageAssets()
+with open(sys.argv[1]) as f:
+    parser.feed(f.read())
+expected = urlsplit(origin)
+if not parser.assets or not parser.manifest:
+    print("Missing module assets or authenticated manifest link", file=sys.stderr)
+    sys.exit(1)
+for asset in parser.assets:
+    actual = urlsplit(urljoin(origin, asset))
+    if (actual.scheme, actual.netloc) != (expected.scheme, expected.netloc):
+        print("Page references assets outside the test HTTPS origin", file=sys.stderr)
+        sys.exit(1)
+PY_CHECK
+}
+
 # Verify that Traefik serves the new deployment through Basic Auth.
 for attempt in $(seq 1 20); do
   if curl --fail --silent --show-error \
       --user "${TEST_HEALTHCHECK_AUTH}" \
       --max-time 10 \
-      https://test.how-much-money.ru/ >/dev/null \
+      https://test.how-much-money.ru/ >"${healthcheck_html}" \
+    && verify_page_assets \
     && curl --fail --silent --show-error \
       --user "${TEST_HEALTHCHECK_AUTH}" \
       --max-time 10 \
