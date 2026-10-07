@@ -69,6 +69,10 @@ set_env APP_ENV test
 set_env APP_DEBUG false
 set_env APP_URL https://test.how-much-money.ru
 set_env ASSET_URL https://test.how-much-money.ru
+# Only trust forwarding headers from the Docker network containing Traefik.
+trusted_proxy_subnets="$(docker network inspect web --format '{{range .IPAM.Config}}{{println .Subnet}}{{end}}' | sed '/^$/d' | paste -sd, -)"
+[[ -n "${trusted_proxy_subnets}" ]] || { echo "Traefik network has no subnets" >&2; exit 1; }
+set_env TRUSTED_PROXIES "${trusted_proxy_subnets}"
 set_env DB_CONNECTION sqlite
 set_env DB_DATABASE /var/db/database.sqlite
 set_env SESSION_DOMAIN test.how-much-money.ru
@@ -192,6 +196,15 @@ for asset in parser.assets:
 PY_CHECK
 }
 
+verify_dashboard_redirect() {
+  local redirect_url
+  redirect_url="$(curl --fail --silent --show-error \
+    --user "${TEST_HEALTHCHECK_AUTH}" --max-time 10 \
+    --output /dev/null --write-out '%{redirect_url}' \
+    https://test.how-much-money.ru/dashboard)" || return 1
+  [[ "${redirect_url}" == "https://test.how-much-money.ru/login" ]]
+}
+
 # Verify that Traefik serves the new deployment through Basic Auth.
 for attempt in $(seq 1 20); do
   if curl --fail --silent --show-error \
@@ -199,6 +212,7 @@ for attempt in $(seq 1 20); do
       --max-time 10 \
       https://test.how-much-money.ru/ >"${healthcheck_html}" \
     && verify_page_assets \
+    && verify_dashboard_redirect \
     && curl --fail --silent --show-error \
       --user "${TEST_HEALTHCHECK_AUTH}" \
       --max-time 10 \
