@@ -5,7 +5,6 @@ import { ConfirmPinModal } from '@/components/confirm-pin-modal';
 import { DailyExpensesCard } from '@/components/daily-expenses-card';
 import { OnboardingDemoBanner } from '@/components/onboarding-demo-banner';
 import { OnboardingTour, type TourStep } from '@/components/onboarding-tour';
-import { OverlapPeriodModal } from '@/components/overlap-period-modal';
 import { ActualRemainingCard } from '@/components/period/actual-remaining-card';
 import { ExpensesBlock } from '@/components/period/expenses-block';
 import { IncomeBlock } from '@/components/period/income-block';
@@ -102,12 +101,6 @@ export default function Period() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [overlapPeriod, setOverlapPeriod] = useState<{
-        id: number;
-        start_date: string;
-        end_date: string;
-    } | null>(null);
-    const [pendingForce, setPendingForce] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [invalidIncomeIds, setInvalidIncomeIds] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -124,12 +117,6 @@ export default function Period() {
     const pendingSaveRef = useRef(false);
     const [saveTick, setSaveTick] = useState(0);
     const incomeNameError = 'Заполните названия прихода.';
-    const lastSavedDatesRef = useRef<{ startDate: string; endDate: string } | null>(
-        null,
-    );
-    const overlapDatesRef = useRef<{ startDate: string; endDate: string } | null>(
-        null,
-    );
     const periodHeaderRef = useRef<HTMLElement>(null);
     const incomeBlockRef = useRef<HTMLDivElement>(null);
     const incomeAddRowRef = useRef<HTMLDivElement>(null);
@@ -327,10 +314,6 @@ export default function Period() {
             setUnforeseenAllocated(cached.unforeseenAllocated ?? 0);
             setOffIncomeExpenses(cached.offIncomeExpenses ?? []);
             setDailyExpenses(cached.dailyExpenses ?? {});
-            lastSavedDatesRef.current = {
-                startDate: cached.startDate ?? '',
-                endDate: cached.endDate ?? '',
-            };
             setIsLoading(false);
             if (typeof navigator !== 'undefined' && !navigator.onLine) {
                 return;
@@ -422,10 +405,6 @@ export default function Period() {
             setDailyExpenses(normalized.dailyExpenses);
             setShowPinModal(false);
             setPinnedTitle(undefined);
-            lastSavedDatesRef.current = {
-                startDate: normalized.startDate,
-                endDate: normalized.endDate,
-            };
             writeCache(normalized);
             hasFetchedRef.current = true;
         } catch (err) {
@@ -441,7 +420,6 @@ export default function Period() {
     };
 
     const handleSave = async (
-        force = false,
         overrides?: { startDate?: string; endDate?: string },
     ) => {
         if (isReadOnly) {
@@ -476,7 +454,6 @@ export default function Period() {
                     end_date: nextEndDate,
                     daily_expenses: dailyExpenses,
                     unforeseen_allocated: unforeseenAllocated,
-                    force,
                     incomes: incomes
                         .filter((item) => item.name.trim() !== '')
                         .map((item) => ({
@@ -521,13 +498,6 @@ export default function Period() {
 
             setStartDate(nextStartDate);
             setEndDate(nextEndDate);
-            setOverlapPeriod(null);
-            setPendingForce(false);
-            overlapDatesRef.current = null;
-            lastSavedDatesRef.current = {
-                startDate: nextStartDate,
-                endDate: nextEndDate,
-            };
             writeCache({
                 id: Number(periodId),
                 startDate: nextStartDate,
@@ -545,22 +515,6 @@ export default function Period() {
             if (isApiError(err) && err.status === 419) {
                 setShowSessionExpired(true);
                 return;
-            }
-            if (isApiError(err) && err.status === 409 && err.data && typeof err.data === 'object') {
-                const overlap = (err.data as { overlap?: { id: number; start_date: string; end_date: string } }).overlap;
-                if (overlap) {
-                    overlapDatesRef.current = {
-                        startDate: nextStartDate,
-                        endDate: nextEndDate,
-                    };
-                    setOverlapPeriod(overlap);
-                    setPendingForce(true);
-                    if (lastSavedDatesRef.current) {
-                        setStartDate(lastSavedDatesRef.current.startDate);
-                        setEndDate(lastSavedDatesRef.current.endDate);
-                    }
-                    return;
-                }
             }
             setSaveError(
                 err instanceof Error
@@ -1000,13 +954,13 @@ export default function Period() {
                             }
                             onStartDateChange={(nextValue) => {
                                 setStartDate(nextValue);
-                                void handleSave(false, {
+                                void handleSave({
                                     startDate: nextValue,
                                 });
                             }}
                             onEndDateChange={(nextValue) => {
                                 setEndDate(nextValue);
-                                void handleSave(false, {
+                                void handleSave({
                                     endDate: nextValue,
                                 });
                             }}
@@ -1076,35 +1030,6 @@ export default function Period() {
                     <SessionExpiredModal
                         onClose={() => setShowSessionExpired(false)}
                         onReload={() => window.location.reload()}
-                    />
-                )}
-
-                {!isViewerMode && overlapPeriod && (
-                    <OverlapPeriodModal
-                        href={
-                            isOnboardingMode
-                                ? `/onboarding/periods/${overlapPeriod.id}`
-                                : `/periods/${overlapPeriod.id}`
-                        }
-                        title={`${formatDateShort(
-                            overlapPeriod.start_date,
-                        )} — ${formatDateShort(overlapPeriod.end_date)}`}
-                        subtitle={`${calculateDaysInclusive(
-                            overlapPeriod.start_date,
-                            overlapPeriod.end_date,
-                        )} дней · ${formatMonthRange(
-                            overlapPeriod.start_date,
-                            overlapPeriod.end_date,
-                        )}`}
-                        onClose={() => {
-                            setOverlapPeriod(null);
-                            setPendingForce(false);
-                            overlapDatesRef.current = null;
-                        }}
-                        onConfirm={() =>
-                            handleSave(true, overlapDatesRef.current ?? undefined)
-                        }
-                        confirmDisabled={!pendingForce || isSaving}
                     />
                 )}
 

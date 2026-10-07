@@ -332,7 +332,6 @@ class PeriodController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'daily_expenses' => ['nullable', 'array'],
             'unforeseen_allocated' => ['nullable', 'integer', 'min:0'],
-            'force' => ['nullable', 'boolean'],
             'incomes' => ['nullable', 'array'],
             'incomes.*.id' => ['nullable', 'integer'],
             'incomes.*.name' => ['required_with:incomes', 'string', 'max:255'],
@@ -353,8 +352,7 @@ class PeriodController extends Controller
             'unforeseen_expenses.*.actual_amount' => ['required_with:unforeseen_expenses', 'integer', 'min:0'],
         ]);
 
-        $force = (bool)($data['force'] ?? false);
-
+        // Overlap confirmation happens only when a period is created.
         if (isset($data['start_date']) && isset($data['end_date'])) {
 
             $startDate = Carbon::parse($data['start_date']);
@@ -367,27 +365,7 @@ class PeriodController extends Controller
             }
 
             $startDate = $startDate->toDateString();
-            $maxDate = Carbon::parse($data['start_date'])->addDay()->toDateString();
             $endDate = $endDate->toDateString();
-
-            $overlap = Period::query()
-                ->where('user_id', $request->user()->id)
-                ->where('id', '!=', $period->id)
-                ->where('start_date', '<', $endDate)
-                ->where('end_date', '>=', $maxDate)
-                ->orderBy('start_date')
-                ->first();
-
-            if ($overlap && ! $force) {
-                return response()->json([
-                    'message' => 'Период пересекается с существующим.',
-                    'overlap' => [
-                        'id' => $overlap->id,
-                        'start_date' => $overlap->start_date->toDateString(),
-                        'end_date' => $overlap->end_date->toDateString(),
-                    ],
-                ], 409);
-            }
 
             $period->start_date = $startDate;
             $period->end_date = $endDate;
