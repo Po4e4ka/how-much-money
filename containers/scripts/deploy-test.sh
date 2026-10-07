@@ -91,9 +91,10 @@ docker run --rm \
 
 # Create a consistent SQLite snapshot. Mount the production database directory
 # read-only so SQLite can also see -wal/-shm sidecar files when WAL mode is used.
+# Match the application UID/GID so the runner can manage the snapshot without sudo.
 rm -f "${TEST_DB_NEXT}"
 docker run --rm \
-  --user 0 \
+  --user 1000:1000 \
   -e PROD_DB_NAME="${PROD_DB_NAME}" \
   -v "${PROD_DB_DIR}:/source:ro" \
   -v "${TEST_DB_DIR}:/target" \
