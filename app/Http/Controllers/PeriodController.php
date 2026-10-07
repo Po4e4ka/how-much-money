@@ -352,6 +352,7 @@ class PeriodController extends Controller
             'unforeseen_expenses.*.actual_amount' => ['required_with:unforeseen_expenses', 'integer', 'min:0'],
         ]);
 
+        // Overlap confirmation happens only when a period is created.
         if (isset($data['start_date']) && isset($data['end_date'])) {
 
             $startDate = Carbon::parse($data['start_date']);
@@ -364,7 +365,6 @@ class PeriodController extends Controller
             }
 
             $startDate = $startDate->toDateString();
-            // Overlap confirmation happens only when a period is created.
             $endDate = $endDate->toDateString();
 
             $period->start_date = $startDate;
