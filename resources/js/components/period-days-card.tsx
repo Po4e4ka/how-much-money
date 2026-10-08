@@ -52,7 +52,7 @@ export const PeriodDaysCard = ({
             </span>
         </div>
         {isEditing && (
-            <div className="mt-3 grid gap-2 grid-cols-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
                     Начало
                     <input
@@ -64,7 +64,7 @@ export const PeriodDaysCard = ({
                         }
                         min={minStartDate}
                         max={maxStartDate}
-                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
+                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs sm:text-sm dark:border-white/10 dark:bg-white/10"
                     />
                 </label>
                 <label className="grid gap-1 text-xs text-[#6a5d52] dark:text-white/60">
@@ -78,7 +78,7 @@ export const PeriodDaysCard = ({
                         }
                         min={minEndDate}
                         max={maxEndDate}
-                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/10 sm:text-sm"
+                        className="rounded-lg border border-black/10 bg-white/90 px-3 py-2 text-xs sm:text-sm dark:border-white/10 dark:bg-white/10"
                     />
                 </label>
             </div>

@@ -39,8 +39,11 @@ export const onboardingApiFetch = async <T = unknown>(
     if (path.includes('/expense-suggestions') && method === 'GET') {
         const periodId = periodIdFromPath(path);
         const params = new URLSearchParams(query);
-        const type = (params.get('type') ??
-            'mandatory') as 'income' | 'mandatory' | 'external' | 'unforeseen';
+        const type = (params.get('type') ?? 'mandatory') as
+            | 'income'
+            | 'mandatory'
+            | 'external'
+            | 'unforeseen';
         return {
             data: onboardingExpenseSuggestions(periodId, type),
         } as T;
@@ -87,4 +90,3 @@ export const onboardingApiFetch = async <T = unknown>(
         method,
     });
 };
-

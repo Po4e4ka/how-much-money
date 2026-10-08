@@ -40,27 +40,27 @@ export const UnforeseenExpensesCard = ({
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <div>
-                        <div className="uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
+                        <div className="tracking-[0.2em] text-[#6a5d52] uppercase dark:text-white/60">
                             Выделено
                         </div>
-                        <div className="mt-1 font-display text-sm tabular-nums text-[#1c1a17] dark:text-[#ffffff]">
+                        <div className="font-display mt-1 text-sm text-[#1c1a17] tabular-nums dark:text-[#ffffff]">
                             {formatCurrency(allocated)}
                         </div>
                     </div>
                     <div>
-                        <div className="uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
+                        <div className="tracking-[0.2em] text-[#6a5d52] uppercase dark:text-white/60">
                             Потрачено
                         </div>
-                        <div className="mt-1 font-display text-sm tabular-nums text-[#b0352b] dark:text-[#ff8b7c]">
+                        <div className="font-display mt-1 text-sm text-[#b0352b] tabular-nums dark:text-[#ff8b7c]">
                             {formatCurrency(spent)}
                         </div>
                     </div>
                     <div>
-                        <div className="uppercase tracking-[0.2em] text-[#6a5d52] dark:text-white/60">
+                        <div className="tracking-[0.2em] text-[#6a5d52] uppercase dark:text-white/60">
                             Разница
                         </div>
                         <div
-                            className={`mt-1 font-display text-sm tabular-nums ${
+                            className={`font-display mt-1 text-sm tabular-nums ${
                                 difference < 0
                                     ? 'text-[#b0352b] dark:text-[#ff8b7c]'
                                     : 'text-[#1e7b4f] dark:text-[#7ce0b3]'

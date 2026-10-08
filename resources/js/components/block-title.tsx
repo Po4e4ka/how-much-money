@@ -15,7 +15,7 @@ export const BlockTitle = ({
     tooltipAriaLabel,
 }: BlockTitleProps) => (
     <div
-        className={`text-xs uppercase tracking-[0.3em] text-[#6a5d52] dark:text-white/60 ${
+        className={`text-xs tracking-[0.3em] text-[#6a5d52] uppercase dark:text-white/60 ${
             className ?? ''
         }`}
     >

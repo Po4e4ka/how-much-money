@@ -15,9 +15,9 @@ import {
     formatMonthRange,
     isValidDate,
 } from '@/lib/date';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem, SharedData } from '@/types';
 import type { DashboardPeriodItem } from '@/types/period';
+import { dashboard } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -63,9 +63,8 @@ export default function Dashboard() {
     const [endDate, setEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [overlapPeriod, setOverlapPeriod] = useState<DashboardPeriodItem | null>(
-        null,
-    );
+    const [overlapPeriod, setOverlapPeriod] =
+        useState<DashboardPeriodItem | null>(null);
     const [pendingForce, setPendingForce] = useState(false);
     const [periods, setPeriods] = useState<DashboardPeriodItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -87,14 +86,13 @@ export default function Dashboard() {
             headers: {
                 'Content-Type': 'application/json',
             },
-        })
-            .catch((err) => {
-                if (isApiError(err) && err.status === 419) {
-                    setShowSessionExpired(true);
-                    return;
-                }
-                console.error(err);
-            });
+        }).catch((err) => {
+            if (isApiError(err) && err.status === 419) {
+                setShowSessionExpired(true);
+                return;
+            }
+            console.error(err);
+        });
     };
 
     const fetchPeriods = async () => {
@@ -182,8 +180,14 @@ export default function Dashboard() {
                     setShowSessionExpired(true);
                     return;
                 }
-                if (err.status === 409 && typeof err.data === 'object' && err.data) {
-                    const overlap = (err.data as { overlap?: DashboardPeriodItem }).overlap;
+                if (
+                    err.status === 409 &&
+                    typeof err.data === 'object' &&
+                    err.data
+                ) {
+                    const overlap = (
+                        err.data as { overlap?: DashboardPeriodItem }
+                    ).overlap;
                     if (overlap) {
                         setOverlapPeriod(overlap);
                         setPendingForce(true);
@@ -204,13 +208,13 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
-                <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
-                <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
+            <div className="font-body relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 text-[#1c1a17] dark:text-[#f7f3ee]">
+                <div className="bg-aurora pointer-events-none absolute inset-0 rounded-3xl opacity-35 dark:hidden" />
+                <div className="bg-aurora-night pointer-events-none absolute inset-0 hidden rounded-3xl opacity-45 dark:block" />
 
                 <section className="relative z-10 flex flex-wrap items-end justify-between gap-6">
                     <div>
-                        <h1 className="mt-3 font-display text-3xl">
+                        <h1 className="font-display mt-3 text-3xl">
                             Периоды учета
                         </h1>
                         <p className="mt-2 max-w-xl text-sm text-[#6a5d52] dark:text-white/70">
@@ -233,15 +237,15 @@ export default function Dashboard() {
 
                 {!isViewerMode && (
                     <section
-                        className="relative z-10 rounded-[28px] border border-black/10 bg-white/85 p-6 shadow-[0_22px_44px_-28px_rgba(28,26,23,0.6)] backdrop-blur animate-reveal dark:border-white/10 dark:bg-white/10"
+                        className="animate-reveal relative z-10 rounded-[28px] border border-black/10 bg-white/85 p-6 shadow-[0_22px_44px_-28px_rgba(28,26,23,0.6)] backdrop-blur dark:border-white/10 dark:bg-white/10"
                         style={delay(120)}
                     >
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
-                                <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                                <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                                     Новый период
                                 </p>
-                                <h2 className="mt-2 font-display text-2xl">
+                                <h2 className="font-display mt-2 text-2xl">
                                     Добавить диапазон дат
                                 </h2>
                             </div>
@@ -261,7 +265,7 @@ export default function Dashboard() {
                                             : undefined
                                     }
                                     max={endDate || undefined}
-                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] transition outline-none focus:border-black/30 sm:ml-0 sm:w-full dark:border-white/10 dark:bg-white/10 dark:text-white"
                                 />
                             </label>
                             <label className="grid cursor-pointer grid-cols-[32px_minmax(0,1fr)] items-center gap-3 text-xs text-[#6a5d52] dark:text-white/70">
@@ -278,7 +282,7 @@ export default function Dashboard() {
                                             ? addMonthsClamp(startDate, 3)
                                             : undefined
                                     }
-                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] transition outline-none focus:border-black/30 sm:ml-0 sm:w-full dark:border-white/10 dark:bg-white/10 dark:text-white"
                                 />
                             </label>
                             <div className="flex flex-col justify-end">
@@ -301,12 +305,12 @@ export default function Dashboard() {
                 )}
 
                 <section
-                    className="relative z-10 grid gap-4 animate-reveal"
+                    className="animate-reveal relative z-10 grid gap-4"
                     style={delay(240)}
                 >
                     {periods.some((period) => period.is_pinned) && (
                         <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-                            <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                            <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                                 Закреплённый период
                             </p>
                             <div className="mt-4">
@@ -345,7 +349,9 @@ export default function Dashboard() {
                         </div>
                     )}
                     <div className="flex items-center justify-between">
-                        <h2 className="font-display text-2xl">История периодов</h2>
+                        <h2 className="font-display text-2xl">
+                            История периодов
+                        </h2>
                         <span className="text-xs text-[#6a5d52] dark:text-white/60">
                             Сначала новые
                         </span>
@@ -363,7 +369,8 @@ export default function Dashboard() {
                         )}
                         {!isLoading && !loadError && periods.length === 0 && (
                             <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
-                                Периодов пока нет. Создайте первый диапазон выше.
+                                Периодов пока нет. Создайте первый диапазон
+                                выше.
                             </div>
                         )}
                         {!isLoading && !loadError && (

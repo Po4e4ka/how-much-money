@@ -33,7 +33,8 @@ export const AutoSuggestInput = ({
     const [highlightIndex, setHighlightIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const activeIndex = highlightIndex < suggestions.length ? highlightIndex : 0;
+    const activeIndex =
+        highlightIndex < suggestions.length ? highlightIndex : 0;
 
     const ghostSuffix = useMemo(() => {
         if (!value) return '';
@@ -62,8 +63,7 @@ export const AutoSuggestInput = ({
             event.preventDefault();
             const delta = event.shiftKey ? -1 : 1;
             const nextIndex =
-                (activeIndex + delta + suggestions.length) %
-                suggestions.length;
+                (activeIndex + delta + suggestions.length) % suggestions.length;
             setHighlightIndex(nextIndex);
             return;
         }

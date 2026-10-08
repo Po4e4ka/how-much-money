@@ -39,13 +39,13 @@ import {
     calculatePeriodMetrics,
     getInvalidIncomeIds,
 } from '@/lib/period-calculations';
-import { dashboard } from '@/routes';
 import type {
     ExpenseItem,
     IncomeItem,
     OffIncomeItem,
     PeriodData,
 } from '@/types/period';
+import { dashboard } from '@/routes';
 
 const emptyPeriod: PeriodData = {
     id: 0,
@@ -90,12 +90,12 @@ export default function Period() {
         [],
     );
     const [unforeseenAllocated, setUnforeseenAllocated] = useState(0);
-    const [offIncomeExpenses, setOffIncomeExpenses] = useState<
-        OffIncomeItem[]
-    >([]);
-    const [dailyExpenses, setDailyExpenses] = useState<
-        Record<string, number>
-    >({});
+    const [offIncomeExpenses, setOffIncomeExpenses] = useState<OffIncomeItem[]>(
+        [],
+    );
+    const [dailyExpenses, setDailyExpenses] = useState<Record<string, number>>(
+        {},
+    );
     const [showDelete, setShowDelete] = useState(false);
     const [isEditingDates, setIsEditingDates] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -140,9 +140,11 @@ export default function Period() {
         if (typeof window === 'undefined') {
             return null;
         }
-        const store = (window as typeof window & {
-            __periodCache?: Record<string, PeriodData>;
-        }).__periodCache;
+        const store = (
+            window as typeof window & {
+                __periodCache?: Record<string, PeriodData>;
+            }
+        ).__periodCache;
         return store?.[cacheKey] ?? null;
     };
 
@@ -159,8 +161,11 @@ export default function Period() {
         win.__periodCache[cacheKey] = data;
     };
 
-    const { totalPlanned: totalPlannedExpenses, totalActual: totalActualExpenses, totalDifference } =
-        calculateExpenseTotals(expenses ?? []);
+    const {
+        totalPlanned: totalPlannedExpenses,
+        totalActual: totalActualExpenses,
+        totalDifference,
+    } = calculateExpenseTotals(expenses ?? []);
     const { totalActual: totalUnforeseenSpent } = calculateExpenseTotals(
         unforeseenExpenses ?? [],
     );
@@ -287,12 +292,12 @@ export default function Period() {
     const hasFullCache = (cached: PeriodData | null): cached is PeriodData =>
         Boolean(
             cached &&
-                cached.id &&
-                Array.isArray(cached.incomes) &&
-                Array.isArray(cached.expenses) &&
-                Array.isArray(cached.unforeseenExpenses) &&
-                typeof cached.unforeseenAllocated === 'number' &&
-                Array.isArray(cached.offIncomeExpenses),
+            cached.id &&
+            Array.isArray(cached.incomes) &&
+            Array.isArray(cached.expenses) &&
+            Array.isArray(cached.unforeseenExpenses) &&
+            typeof cached.unforeseenAllocated === 'number' &&
+            Array.isArray(cached.offIncomeExpenses),
         );
 
     const fetchPeriod = async () => {
@@ -419,9 +424,10 @@ export default function Period() {
         }
     };
 
-    const handleSave = async (
-        overrides?: { startDate?: string; endDate?: string },
-    ) => {
+    const handleSave = async (overrides?: {
+        startDate?: string;
+        endDate?: string;
+    }) => {
         if (isReadOnly) {
             return;
         }
@@ -450,48 +456,56 @@ export default function Period() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                    start_date: nextStartDate,
-                    end_date: nextEndDate,
-                    daily_expenses: dailyExpenses,
-                    unforeseen_allocated: unforeseenAllocated,
-                    incomes: incomes
-                        .filter((item) => item.name.trim() !== '')
-                        .map((item) => ({
-                            id: Number.isFinite(Number(item.id))
-                                ? Number(item.id)
-                                : undefined,
-                            name: item.name,
-                            amount: toNumberOrZero(item.amount),
-                        })),
-                    expenses: expenses
-                        .filter((item) => item.name.trim() !== '')
-                        .map((item) => ({
-                            id: Number.isFinite(Number(item.id))
-                                ? Number(item.id)
-                                : undefined,
-                            name: item.name,
-                            planned_amount: toNumberOrZero(item.plannedAmount),
-                            actual_amount: toNumberOrZero(item.actualAmount),
-                        })),
-                    unforeseen_expenses: unforeseenExpenses
-                        .filter((item) => item.name.trim() !== '')
-                        .map((item) => ({
-                            id: Number.isFinite(Number(item.id))
-                                ? Number(item.id)
-                                : undefined,
-                            name: item.name,
-                            planned_amount: toNumberOrZero(item.plannedAmount),
-                            actual_amount: toNumberOrZero(item.actualAmount),
-                        })),
-                    external_expenses: offIncomeExpenses
-                        .filter((item) => item.name.trim() !== '')
-                        .map((item) => ({
-                            id: Number.isFinite(Number(item.id))
-                                ? Number(item.id)
-                                : undefined,
-                            name: item.name,
-                            amount: toNumberOrZero(item.amount),
-                        })),
+                        start_date: nextStartDate,
+                        end_date: nextEndDate,
+                        daily_expenses: dailyExpenses,
+                        unforeseen_allocated: unforeseenAllocated,
+                        incomes: incomes
+                            .filter((item) => item.name.trim() !== '')
+                            .map((item) => ({
+                                id: Number.isFinite(Number(item.id))
+                                    ? Number(item.id)
+                                    : undefined,
+                                name: item.name,
+                                amount: toNumberOrZero(item.amount),
+                            })),
+                        expenses: expenses
+                            .filter((item) => item.name.trim() !== '')
+                            .map((item) => ({
+                                id: Number.isFinite(Number(item.id))
+                                    ? Number(item.id)
+                                    : undefined,
+                                name: item.name,
+                                planned_amount: toNumberOrZero(
+                                    item.plannedAmount,
+                                ),
+                                actual_amount: toNumberOrZero(
+                                    item.actualAmount,
+                                ),
+                            })),
+                        unforeseen_expenses: unforeseenExpenses
+                            .filter((item) => item.name.trim() !== '')
+                            .map((item) => ({
+                                id: Number.isFinite(Number(item.id))
+                                    ? Number(item.id)
+                                    : undefined,
+                                name: item.name,
+                                planned_amount: toNumberOrZero(
+                                    item.plannedAmount,
+                                ),
+                                actual_amount: toNumberOrZero(
+                                    item.actualAmount,
+                                ),
+                            })),
+                        external_expenses: offIncomeExpenses
+                            .filter((item) => item.name.trim() !== '')
+                            .map((item) => ({
+                                id: Number.isFinite(Number(item.id))
+                                    ? Number(item.id)
+                                    : undefined,
+                                name: item.name,
+                                amount: toNumberOrZero(item.amount),
+                            })),
                     }),
                 },
             );
@@ -666,8 +680,16 @@ export default function Period() {
                     setShowSessionExpired(true);
                     return;
                 }
-                if (err.status === 409 && err.data && typeof err.data === 'object') {
-                    const pinned = (err.data as { pinned?: { start_date: string; end_date: string } }).pinned;
+                if (
+                    err.status === 409 &&
+                    err.data &&
+                    typeof err.data === 'object'
+                ) {
+                    const pinned = (
+                        err.data as {
+                            pinned?: { start_date: string; end_date: string };
+                        }
+                    ).pinned;
                     if (pinned) {
                         setPinnedTitle(
                             `${formatDateShort(pinned.start_date)} — ${formatDateShort(
@@ -696,7 +718,6 @@ export default function Period() {
         void fetchPeriod();
     }, [periodId, viewerId]);
 
-
     useEffect(() => {
         if (!isSaving && pendingSaveRef.current) {
             pendingSaveRef.current = false;
@@ -713,7 +734,10 @@ export default function Period() {
     useEffect(() => {
         const nextInvalidIncomeIds = getInvalidIncomeIds(incomes);
         setInvalidIncomeIds(nextInvalidIncomeIds);
-        if (nextInvalidIncomeIds.length === 0 && saveError === incomeNameError) {
+        if (
+            nextInvalidIncomeIds.length === 0 &&
+            saveError === incomeNameError
+        ) {
             setSaveError(null);
         }
     }, [incomes, saveError]);
@@ -739,24 +763,24 @@ export default function Period() {
             <Head title={periodTitle} />
             {isOnboardingMode && <OnboardingDemoBanner />}
             <div
-                className={`relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee]${
+                className={`font-body relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-3 text-[#1c1a17] dark:text-[#f7f3ee]${
                     period.isClosed
-                        ? ' bg-emerald-50/70 dark:bg-emerald-950/20'
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/20'
                         : ''
-                }${isOnboardingMode ? ' pt-16' : ''}`}
+                }${isOnboardingMode ? 'pt-16' : ''}`}
             >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
-                <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
+                <div className="bg-aurora pointer-events-none absolute inset-0 rounded-3xl opacity-35 dark:hidden" />
+                <div className="bg-aurora-night pointer-events-none absolute inset-0 hidden rounded-3xl opacity-45 dark:block" />
 
                 <section
                     ref={periodHeaderRef}
                     className="relative z-10 flex flex-wrap items-center justify-between gap-6"
                 >
                     <div>
-                        <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                        <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                             Период
                         </p>
-                        <h1 className="mt-3 font-display text-3xl">
+                        <h1 className="font-display mt-3 text-3xl">
                             {periodTitle}
                         </h1>
                         <p className="mt-2 text-sm text-[#6a5d52] dark:text-white/70">
@@ -783,16 +807,16 @@ export default function Period() {
                         {!isViewerMode &&
                             (period.isPinned || isDailyComplete) &&
                             !period.isClosed && (
-                            <PillButton
-                                type="button"
-                                onClick={() => setShowCloseModal(true)}
-                                disabled={isClosing}
-                                tone="success"
-                                className="px-4 py-2"
-                            >
-                                Закрыть период
-                            </PillButton>
-                        )}
+                                <PillButton
+                                    type="button"
+                                    onClick={() => setShowCloseModal(true)}
+                                    disabled={isClosing}
+                                    tone="success"
+                                    className="px-4 py-2"
+                                >
+                                    Закрыть период
+                                </PillButton>
+                            )}
                         {!isViewerMode && (
                             <PillButton
                                 type="button"
@@ -831,7 +855,7 @@ export default function Period() {
                 )}
 
                 <section
-                    className="relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start animate-reveal"
+                    className="animate-reveal relative z-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start"
                     style={delay(120)}
                 >
                     {isLoading && (
@@ -972,7 +996,9 @@ export default function Period() {
                             maxStartDate={endDate}
                             minEndDate={startDate}
                             maxEndDate={
-                                startDate ? addMonthsClamp(startDate, 3) : undefined
+                                startDate
+                                    ? addMonthsClamp(startDate, 3)
+                                    : undefined
                             }
                         />
                         <DailyExpensesCard
@@ -1038,7 +1064,6 @@ export default function Period() {
                         {saveError}
                     </div>
                 )}
-
             </div>
             {isOnboardingMode && !isViewerMode && (
                 <OnboardingTour

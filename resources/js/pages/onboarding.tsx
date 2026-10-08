@@ -71,21 +71,22 @@ export default function Onboarding() {
     const [endDate, setEndDate] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [overlapPeriod, setOverlapPeriod] = useState<DashboardPeriodItem | null>(
-        null,
-    );
+    const [overlapPeriod, setOverlapPeriod] =
+        useState<DashboardPeriodItem | null>(null);
     const [pendingForce, setPendingForce] = useState(false);
     const [periods, setPeriods] = useState<DashboardPeriodItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [hasStartedGuide, setHasStartedGuide] = useState(() => isTourStarted());
+    const [hasStartedGuide, setHasStartedGuide] = useState(() =>
+        isTourStarted(),
+    );
     const [isGuideActive, setIsGuideActive] = useState(
         () => isTourStarted() && !isTourCompleted(),
     );
     const [tourInstance, setTourInstance] = useState(0);
-    const [lastCreatedPeriodId, setLastCreatedPeriodId] = useState<number | null>(
-        null,
-    );
+    const [lastCreatedPeriodId, setLastCreatedPeriodId] = useState<
+        number | null
+    >(null);
     const startInputRef = useRef<HTMLInputElement>(null);
     const endInputRef = useRef<HTMLInputElement>(null);
     const saveButtonRef = useRef<HTMLButtonElement>(null);
@@ -213,12 +214,12 @@ export default function Onboarding() {
             <Head title="Onboarding" />
             <OnboardingDemoBanner />
             <main className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl pt-16">
-                <div className="relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 font-body text-[#1c1a17] dark:text-[#f7f3ee]">
-                    <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
-                    <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
+                <div className="font-body relative flex flex-1 flex-col gap-8 overflow-x-hidden rounded-xl p-6 text-[#1c1a17] dark:text-[#f7f3ee]">
+                    <div className="bg-aurora pointer-events-none absolute inset-0 rounded-3xl opacity-35 dark:hidden" />
+                    <div className="bg-aurora-night pointer-events-none absolute inset-0 hidden rounded-3xl opacity-45 dark:block" />
                     <section className="relative z-10 flex flex-wrap items-end justify-between gap-6">
                         <div>
-                            <h1 className="mt-3 font-display text-3xl">
+                            <h1 className="font-display mt-3 text-3xl">
                                 Периоды учета
                             </h1>
                             <p className="mt-2 max-w-xl text-sm text-[#6a5d52] dark:text-white/70">
@@ -234,14 +235,12 @@ export default function Onboarding() {
                             isGuideActive ? 'z-50' : 'z-10'
                         }`}
                     >
-                        <div
-                            className="flex flex-wrap items-center justify-between gap-4"
-                        >
+                        <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
-                                <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                                <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                                     Новый период
                                 </p>
-                                <h2 className="mt-2 font-display text-2xl">
+                                <h2 className="font-display mt-2 text-2xl">
                                     Добавить диапазон дат
                                 </h2>
                             </div>
@@ -263,7 +262,7 @@ export default function Onboarding() {
                                             : undefined
                                     }
                                     max={endDate || undefined}
-                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] transition outline-none focus:border-black/30 sm:ml-0 sm:w-full dark:border-white/10 dark:bg-white/10 dark:text-white"
                                 />
                             </label>
 
@@ -282,7 +281,7 @@ export default function Onboarding() {
                                             ? addMonthsClamp(startDate, 3)
                                             : undefined
                                     }
-                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] outline-none transition focus:border-black/30 dark:border-white/10 dark:bg-white/10 dark:text-white sm:ml-0 sm:w-full"
+                                    className="date-input ml-auto w-[80%] rounded-lg border border-black/10 bg-white/90 px-4 py-3 text-sm text-[#1c1a17] transition outline-none focus:border-black/30 sm:ml-0 sm:w-full dark:border-white/10 dark:bg-white/10 dark:text-white"
                                 />
                             </label>
 
@@ -311,7 +310,7 @@ export default function Onboarding() {
                     <section className="relative z-10 grid gap-4">
                         {Boolean(pinnedPeriod) && (
                             <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
-                                <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                                <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                                     Закреплённый период
                                 </p>
                                 <div className="mt-4">
@@ -319,7 +318,8 @@ export default function Onboarding() {
                                         if (!pinnedPeriod) {
                                             return null;
                                         }
-                                        const meta = buildPeriodMeta(pinnedPeriod);
+                                        const meta =
+                                            buildPeriodMeta(pinnedPeriod);
                                         return (
                                             <PeriodList
                                                 items={[
@@ -370,12 +370,14 @@ export default function Onboarding() {
                                     {loadError}
                                 </div>
                             )}
-                            {!isLoading && !loadError && periods.length === 0 && (
-                                <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
-                                    Периодов пока нет. Создайте первый диапазон
-                                    выше.
-                                </div>
-                            )}
+                            {!isLoading &&
+                                !loadError &&
+                                periods.length === 0 && (
+                                    <div className="rounded-[28px] border border-black/10 bg-white/70 p-5 text-sm text-[#6a5d52] dark:border-white/10 dark:bg-white/10 dark:text-white/70">
+                                        Периодов пока нет. Создайте первый
+                                        диапазон выше.
+                                    </div>
+                                )}
                             {!isLoading && !loadError && (
                                 <PeriodList
                                     items={periods.map((period) => {
@@ -388,7 +390,8 @@ export default function Onboarding() {
                                             actualRemaining:
                                                 period.actual_remaining ?? null,
                                             elementRef:
-                                                period.id === lastCreatedPeriodId
+                                                period.id ===
+                                                lastCreatedPeriodId
                                                     ? createdPeriodRef
                                                     : undefined,
                                         };
@@ -441,16 +444,16 @@ export default function Onboarding() {
             {!hasStartedGuide && (
                 <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/62 p-6">
                     <div className="w-full max-w-xl rounded-3xl border border-[#b9a6ff]/50 bg-[#1b1227]/95 p-7 text-white shadow-[0_30px_70px_-35px_rgba(0,0,0,0.9)]">
-                        <p className="text-xs uppercase tracking-[0.35em] text-[#baa7ff]">
+                        <p className="text-xs tracking-[0.35em] text-[#baa7ff] uppercase">
                             Онбординг
                         </p>
-                        <h2 className="mt-3 font-display text-3xl">
+                        <h2 className="font-display mt-3 text-3xl">
                             Пошаговая демо-инструкция
                         </h2>
                         <p className="mt-3 text-sm text-white/80">
-                            Вы пройдёте создание периода и открытие карточки периода.
-                            Подсказки будут вести по шагам, а данные сохраняются
-                            в рамках текущей сессии.
+                            Вы пройдёте создание периода и открытие карточки
+                            периода. Подсказки будут вести по шагам, а данные
+                            сохраняются в рамках текущей сессии.
                         </p>
                         <div className="mt-6">
                             <button

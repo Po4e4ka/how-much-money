@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { FloatingInput } from '@/components/ui/floating-input';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import type { SharedData } from '@/types';
 import { dashboard, logout } from '@/routes';
 import { store as loginStore } from '@/routes/login';
 import { email as passwordEmail } from '@/routes/password';
 import { store as registerStore } from '@/routes/register';
-import type { SharedData } from '@/types';
 
 const previewPhrases = [
     'Финансовый контроль без хаоса',
@@ -101,7 +101,7 @@ export default function Welcome({
                 }
             `}</style>
 
-            <div className="relative min-h-screen overflow-hidden bg-[#0b0f14] font-body text-[#e9eef3]">
+            <div className="font-body relative min-h-screen overflow-hidden bg-[#0b0f14] text-[#e9eef3]">
                 <div
                     className="pointer-events-none absolute inset-0 opacity-90"
                     style={{
@@ -109,37 +109,43 @@ export default function Welcome({
                             'radial-gradient(55% 70% at 12% 12%, rgba(184,162,255,0.28), transparent 60%), radial-gradient(50% 65% at 72% 82%, rgba(184,162,255,0.18), transparent 62%), radial-gradient(45% 60% at 88% 20%, rgba(184,162,255,0.12), transparent 58%)',
                     }}
                 />
-                <div className="pointer-events-none absolute inset-0 bg-grid-night opacity-35" />
+                <div className="bg-grid-night pointer-events-none absolute inset-0 opacity-35" />
 
                 <div className="relative grid min-h-screen w-full lg:grid-cols-[minmax(0,1fr)_700px]">
                     <section className="flex min-h-[50svh] items-center px-6 py-10 sm:px-10 lg:min-h-screen lg:px-16 xl:px-24">
                         <div className="max-w-2xl space-y-6">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#0b0f14]">
-                                    <span className="font-display text-lg">HMM</span>
+                                    <span className="font-display text-lg">
+                                        HMM
+                                    </span>
                                 </div>
-                                <p className="text-xs uppercase tracking-[0.3em] text-white/65">
+                                <p className="text-xs tracking-[0.3em] text-white/65 uppercase">
                                     How much money
                                 </p>
                             </div>
 
                             <div className="relative h-[136px] overflow-hidden sm:h-[158px]">
                                 {leavingPhraseIndex !== null && (
-                                    <p className="absolute inset-0 font-display text-4xl leading-tight text-white sm:text-5xl animate-[hmm-phrase-out_520ms_ease-out_forwards]">
+                                    <p className="font-display absolute inset-0 animate-[hmm-phrase-out_520ms_ease-out_forwards] text-4xl leading-tight text-white sm:text-5xl">
                                         {previewPhrases[leavingPhraseIndex]}
                                     </p>
                                 )}
 
                                 <p
                                     key={activePhraseIndex}
-                                    className="absolute inset-0 font-display text-4xl leading-tight text-white sm:text-5xl animate-[hmm-phrase-in_520ms_ease-out_forwards]"
+                                    className="font-display absolute inset-0 animate-[hmm-phrase-in_520ms_ease-out_forwards] text-4xl leading-tight text-white sm:text-5xl"
                                 >
                                     {previewPhrases[activePhraseIndex]}
                                 </p>
                             </div>
 
                             <p className="text-base text-white/70 sm:text-lg">
-                                Система стратегического планирования личных финансов. Приложение распределяет бюджет по периодам и формирует ежедневный ориентир расходов, сохраняя баланс между комфортом и дисциплиной.
+                                Система стратегического планирования личных
+                                финансов. Приложение распределяет бюджет по
+                                периодам и формирует ежедневный ориентир
+                                расходов, сохраняя баланс между комфортом и
+                                дисциплиной.
                             </p>
 
                             <Link
@@ -208,12 +214,15 @@ export default function Welcome({
                                                             value={forgotEmail}
                                                             onChange={(event) =>
                                                                 setForgotEmail(
-                                                                    event.target.value,
+                                                                    event.target
+                                                                        .value,
                                                                 )
                                                             }
                                                         />
                                                         <InputError
-                                                            message={errors.email}
+                                                            message={
+                                                                errors.email
+                                                            }
                                                         />
                                                     </div>
 
@@ -227,7 +236,9 @@ export default function Welcome({
                                                         }
                                                         data-test="welcome-forgot-button"
                                                     >
-                                                        {processing && <Spinner />}
+                                                        {processing && (
+                                                            <Spinner />
+                                                        )}
                                                         Отправить ссылку
                                                     </Button>
 
@@ -367,8 +378,9 @@ export default function Welcome({
                                                                 </Button>
 
                                                                 <div className="space-y-2">
-                                                                    <p className="text-center text-xs uppercase tracking-[0.18em] text-white/60">
-                                                                        Или через
+                                                                    <p className="text-center text-xs tracking-[0.18em] text-white/60 uppercase">
+                                                                        Или
+                                                                        через
                                                                     </p>
                                                                     <div className="grid grid-cols-2 gap-2">
                                                                         <a

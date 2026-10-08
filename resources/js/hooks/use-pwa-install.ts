@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 type BeforeInstallPromptEvent = Event & {
     prompt: () => Promise<void>;
-    userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+    userChoice: Promise<{
+        outcome: 'accepted' | 'dismissed';
+        platform: string;
+    }>;
 };
 
 type UsePwaInstallReturn = {
@@ -20,8 +23,8 @@ const isStandaloneMode = (): boolean => {
     if (typeof window === 'undefined') return false;
 
     const navigatorStandalone =
-        (window.navigator as Navigator & { standalone?: boolean }).standalone ===
-        true;
+        (window.navigator as Navigator & { standalone?: boolean })
+            .standalone === true;
 
     return (
         window.matchMedia('(display-mode: standalone)').matches ||

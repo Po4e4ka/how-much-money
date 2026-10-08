@@ -98,7 +98,7 @@ export default function Login({
                             </Button>
 
                             <div className="space-y-2">
-                                <p className="text-center text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                                <p className="text-center text-xs tracking-[0.18em] text-muted-foreground uppercase">
                                     Или через
                                 </p>
                                 <div className="grid grid-cols-2 gap-2">

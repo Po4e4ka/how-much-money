@@ -72,9 +72,7 @@ export const ActualRemainingCard = ({
                         : 'text-[#b0352b] dark:text-[#ff8b7c]'
                 }`}
             >
-                {formatSignedCurrency(
-                    actualRemaining,
-                )}
+                {formatSignedCurrency(actualRemaining)}
             </FormulaValue>
         </FormulaRow>
         <BlockSepLine className="mt-3" />
