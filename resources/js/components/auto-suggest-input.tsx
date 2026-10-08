@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 type AutoSuggestInputProps = {
     value: string;
@@ -33,19 +33,15 @@ export const AutoSuggestInput = ({
     const [highlightIndex, setHighlightIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        if (highlightIndex >= suggestions.length && suggestions.length > 0) {
-            setHighlightIndex(0);
-        }
-    }, [highlightIndex, suggestions.length]);
+    const activeIndex = highlightIndex < suggestions.length ? highlightIndex : 0;
 
     const ghostSuffix = useMemo(() => {
         if (!value) return '';
-        const candidate = suggestions[highlightIndex] ?? suggestions[0];
+        const candidate = suggestions[activeIndex] ?? suggestions[0];
         if (!candidate) return '';
         if (!candidate.toLowerCase().startsWith(value.toLowerCase())) return '';
         return candidate.slice(value.length);
-    }, [highlightIndex, suggestions, value]);
+    }, [activeIndex, suggestions, value]);
 
     const applySuggestion = (name: string) => {
         onSelect(name);
@@ -66,7 +62,7 @@ export const AutoSuggestInput = ({
             event.preventDefault();
             const delta = event.shiftKey ? -1 : 1;
             const nextIndex =
-                (highlightIndex + delta + suggestions.length) %
+                (activeIndex + delta + suggestions.length) %
                 suggestions.length;
             setHighlightIndex(nextIndex);
             return;
@@ -76,7 +72,7 @@ export const AutoSuggestInput = ({
 
         event.preventDefault();
         if (suggestions.length === 0) return;
-        const match = suggestions[highlightIndex] ?? suggestions[0];
+        const match = suggestions[activeIndex] ?? suggestions[0];
         if (match) {
             applySuggestion(match);
         }
@@ -136,7 +132,7 @@ export const AutoSuggestInput = ({
                                     }
                                     className={[
                                         'inline-flex items-center rounded-full border text-[11px] font-medium transition',
-                                        index === highlightIndex
+                                        index === activeIndex
                                             ? 'border-black/20 bg-black/10 text-[#1c1a17] dark:border-white/30 dark:bg-white/10 dark:text-white'
                                             : 'border-black/10 bg-black/5 text-[#1c1a17] hover:bg-black/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10',
                                     ].join(' ')}
