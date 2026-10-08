@@ -15,7 +15,7 @@ on:
       - workos
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   quality:
@@ -34,7 +34,7 @@ jobs:
           npm install
 
       - name: Run Pint
-        run: composer lint
+        run: composer run test:lint
 
       - name: Format Frontend
         run: npm run format
