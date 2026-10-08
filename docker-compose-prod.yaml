@@ -1,17 +1,15 @@
 services:
   hmm-laravel:
     container_name: hmm-laravel
-    build:
-      dockerfile: containers/prod.Dockerfile
-      args:
-        USER_ID: 1000
-        GROUP_ID: 1000
-        USER_NAME: unit
+    image: ${HMM_PROD_IMAGE:?HMM_PROD_IMAGE must be set}
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/db/database.sqlite
     volumes:
-      - ./:/var/www
-      - ./containers/configs/php/php.ini:/usr/local/etc/php/conf.d/php.ini
-      - ./containers/configs/unit/unit.json:/docker-entrypoint.d/unit.json:ro
-    entrypoint: /docker-entrypoint.d/entrypoint.sh
+      - ${PROD_ROOT:?PROD_ROOT must be set}:/var/db
+      - ./storage:/var/www/storage
     command:
       - "unitd"
       - "--no-daemon"
@@ -46,6 +44,7 @@ services:
     networks:
       - web
       - hmm_net
+    restart: unless-stopped
 
   hmm-cron:
     container_name: hmm-cron
