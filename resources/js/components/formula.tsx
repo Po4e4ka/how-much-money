@@ -27,7 +27,7 @@ export const FormulaRow = ({ children, className }: FormulaRowProps) => (
 
 export const FormulaValue = ({ children, className }: FormulaValueProps) => (
     <span
-        className={`inline-flex items-center font-display tabular-nums leading-[0.9] ${
+        className={`font-display inline-flex items-center leading-[0.9] tabular-nums ${
             className ?? ''
         }`}
     >
@@ -37,7 +37,7 @@ export const FormulaValue = ({ children, className }: FormulaValueProps) => (
 
 export const FormulaOp = ({ children, className }: FormulaOpProps) => (
     <span
-        className={`inline-flex items-center leading-[0.9] relative -top-[1px] text-black/50 dark:text-white/60 ${
+        className={`relative -top-[1px] inline-flex items-center leading-[0.9] text-black/50 dark:text-white/60 ${
             className ?? ''
         }`}
     >

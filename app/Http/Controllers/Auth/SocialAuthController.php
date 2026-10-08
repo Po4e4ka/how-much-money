@@ -239,7 +239,7 @@ class SocialAuthController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $profile
+     * @param  array<string, mixed>  $profile
      */
     private function resolveYandexAvatar(array $profile): ?string
     {
@@ -263,9 +263,6 @@ class SocialAuthController extends Controller
         return route('auth.yandex.callback');
     }
 
-    /**
-     * @param string|null ...$candidates
-     */
     private function resolveSocialName(?string ...$candidates): string
     {
         $fallback = array_pop($candidates) ?? 'User';
@@ -351,7 +348,7 @@ class SocialAuthController extends Controller
     }
 
     /**
-     * @param array<string, string> $payload
+     * @param  array<string, string>  $payload
      */
     private function hasValidTelegramSignature(array $payload): bool
     {

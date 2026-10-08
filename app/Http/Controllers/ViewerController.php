@@ -72,7 +72,7 @@ class ViewerController extends Controller
 
         $viewer = User::query()->where('email', $data['email'])->first();
 
-        if (!$viewer) {
+        if (! $viewer) {
             return response()->json([
                 'message' => 'Такого пользователя нет.',
             ], 404);

@@ -21,7 +21,10 @@ export const PeriodList = ({ items, baseHref, itemHref }: PeriodListProps) => (
         {items.map((period) => (
             <PeriodCard
                 key={period.id}
-                href={itemHref?.(period) ?? `${baseHref ?? '/periods'}/${period.id}`}
+                href={
+                    itemHref?.(period) ??
+                    `${baseHref ?? '/periods'}/${period.id}`
+                }
                 title={period.title}
                 subtitle={period.subtitle}
                 isClosed={period.isClosed}

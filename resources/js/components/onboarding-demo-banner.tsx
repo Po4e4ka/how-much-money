@@ -32,8 +32,9 @@ export function OnboardingDemoBanner({
             <section className="fixed inset-x-0 top-0 z-[120] border-b border-[#b9a6ff]/35 bg-[#1b1227]/92 shadow-[0_12px_28px_-18px_rgba(0,0,0,0.7)] backdrop-blur">
                 <div className="mx-auto flex min-h-14 w-full max-w-7xl items-center justify-between gap-3 px-4 py-2 text-sm text-white">
                     <p className="line-clamp-2">
-                        Демо-инструкция: в этом режиме вы проходите онбординг без API и
-                        работаете только с локальными данными браузера.
+                        Демо-инструкция: в этом режиме вы проходите онбординг
+                        без API и работаете только с локальными данными
+                        браузера.
                     </p>
                     <div className="flex items-center gap-2">
                         <button
@@ -61,10 +62,12 @@ export function OnboardingDemoBanner({
             {isRestartConfirmOpen && (
                 <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/58 p-6">
                     <div className="w-full max-w-lg rounded-2xl border border-[#b9a6ff]/45 bg-[#1b1227]/96 p-6 text-white shadow-[0_30px_70px_-35px_rgba(0,0,0,0.9)]">
-                        <h3 className="font-display text-2xl">Начать онбординг заново?</h3>
+                        <h3 className="font-display text-2xl">
+                            Начать онбординг заново?
+                        </h3>
                         <p className="mt-3 text-sm text-white/80">
-                            Все данные текущего демо будут удалены: созданные периоды,
-                            прогресс шагов и локальные изменения.
+                            Все данные текущего демо будут удалены: созданные
+                            периоды, прогресс шагов и локальные изменения.
                         </p>
                         <div className="mt-6 flex items-center justify-end gap-3">
                             <button

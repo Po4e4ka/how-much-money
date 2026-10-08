@@ -1,9 +1,5 @@
 import { formatDateKey, parseDate } from '@/lib/date';
-import type {
-    AmountItem,
-    ExpenseItem,
-    NamedAmountItem,
-} from '@/types/period';
+import type { AmountItem, ExpenseItem, NamedAmountItem } from '@/types/period';
 
 export const calculateAmountTotal = (items: AmountItem[]) =>
     (items ?? []).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -26,8 +22,7 @@ export const calculateExpenseTotals = (items: ExpenseItem[]) => {
 
 export const calculateDailyExpensesTotal = (
     dailyExpenses: Record<string, number>,
-) =>
-    Object.values(dailyExpenses).reduce((sum, value) => sum + (value || 0), 0);
+) => Object.values(dailyExpenses).reduce((sum, value) => sum + (value || 0), 0);
 
 export const calculateFilledDays = (
     startDate: string,

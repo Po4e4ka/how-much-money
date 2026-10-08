@@ -1,6 +1,10 @@
 import { HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type TooltipInfoProps = {
     text: string;
@@ -15,7 +19,9 @@ export function TooltipInfo({ text, ariaLabel }: TooltipInfoProps) {
         if (typeof window === 'undefined') {
             return;
         }
-        const matcher = window.matchMedia('(hover: none) and (pointer: coarse)');
+        const matcher = window.matchMedia(
+            '(hover: none) and (pointer: coarse)',
+        );
         const handleChange = () => setIsTouch(matcher.matches);
         handleChange();
         matcher.addEventListener('change', handleChange);

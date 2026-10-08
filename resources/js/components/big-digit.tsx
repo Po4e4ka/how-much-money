@@ -6,7 +6,5 @@ type BigDigitProps = {
 };
 
 export const BigDigit = ({ children, className }: BigDigitProps) => (
-    <div className={`font-display text-2xl ${className ?? ''}`}>
-        {children}
-    </div>
+    <div className={`font-display text-2xl ${className ?? ''}`}>{children}</div>
 );

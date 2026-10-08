@@ -16,8 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { apiFetch, isApiError } from '@/lib/api';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem, SharedData } from '@/types';
+import { dashboard } from '@/routes';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -226,7 +226,9 @@ export default function Sharing() {
                 method: 'DELETE',
             });
 
-            setLinks((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+            setLinks((prev) =>
+                prev.filter((item) => item.id !== deleteTarget.id),
+            );
             setDeleteTarget(null);
         } catch (err) {
             if (isApiError(err) && err.status === 419) {
@@ -250,7 +252,9 @@ export default function Sharing() {
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <h1 className="font-display text-3xl">Доступ к периодам</h1>
+                        <h1 className="font-display text-3xl">
+                            Доступ к периодам
+                        </h1>
                         <p className="mt-2 text-sm text-muted-foreground">
                             {listTitle}
                         </p>
@@ -266,7 +270,9 @@ export default function Sharing() {
 
                 <div className="rounded-2xl border bg-card/60 p-6">
                     {isLoading ? (
-                        <p className="text-sm text-muted-foreground">Загрузка...</p>
+                        <p className="text-sm text-muted-foreground">
+                            Загрузка...
+                        </p>
                     ) : links.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             Пока никому не выдан доступ.
@@ -281,22 +287,32 @@ export default function Sharing() {
                                     <div className="space-y-1">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <p className="text-sm font-medium text-foreground">
-                                                {link.viewer?.name || 'Без имени'}
+                                                {link.viewer?.name ||
+                                                    'Без имени'}
                                             </p>
-                                            <Badge variant={statusBadgeVariant(link.status)}>
+                                            <Badge
+                                                variant={statusBadgeVariant(
+                                                    link.status,
+                                                )}
+                                            >
                                                 {statusLabels[link.status]}
                                             </Badge>
                                         </div>
                                         <p className="text-sm text-muted-foreground">
-                                            {link.viewer?.email ?? 'Пользователь недоступен'}
+                                            {link.viewer?.email ??
+                                                'Пользователь недоступен'}
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleToggleStatus(link)}
-                                            disabled={Boolean(isUpdating[link.id])}
+                                            onClick={() =>
+                                                handleToggleStatus(link)
+                                            }
+                                            disabled={Boolean(
+                                                isUpdating[link.id],
+                                            )}
                                         >
                                             {link.status === 'active'
                                                 ? 'Заблокировать'
@@ -305,7 +321,9 @@ export default function Sharing() {
                                         <Button
                                             variant="destructive"
                                             size="sm"
-                                            onClick={() => setDeleteTarget(link)}
+                                            onClick={() =>
+                                                setDeleteTarget(link)
+                                            }
                                         >
                                             Удалить
                                         </Button>
@@ -323,7 +341,8 @@ export default function Sharing() {
                                 Доступы для просмотра
                             </h2>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Пользователи, которые дали вам доступ к своим периодам.
+                                Пользователи, которые дали вам доступ к своим
+                                периодам.
                             </p>
                         </div>
                     </div>
@@ -349,7 +368,8 @@ export default function Sharing() {
                                         <div className="space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <p className="text-sm font-medium text-foreground">
-                                                    {link.user?.name || 'Без имени'}
+                                                    {link.user?.name ||
+                                                        'Без имени'}
                                                 </p>
                                                 <Badge
                                                     variant={statusBadgeVariant(
@@ -360,18 +380,25 @@ export default function Sharing() {
                                                 </Badge>
                                             </div>
                                             <p className="text-sm text-muted-foreground">
-                                                {link.user?.email ?? 'Пользователь недоступен'}
+                                                {link.user?.email ??
+                                                    'Пользователь недоступен'}
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href={`/shared/${link.user_id}`}>
-                                                Посмотреть периоды
-                                            </Link>
-                                        </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={`/shared/${link.user_id}`}
+                                                >
+                                                    Посмотреть периоды
+                                                </Link>
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
                             </div>
                         )}
                     </div>
@@ -383,8 +410,8 @@ export default function Sharing() {
                     <DialogHeader>
                         <DialogTitle>Добавить доступ</DialogTitle>
                         <DialogDescription>
-                            Укажите почту пользователя, которому хотите открыть доступ
-                            к своим периодам.
+                            Укажите почту пользователя, которому хотите открыть
+                            доступ к своим периодам.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">
@@ -394,7 +421,9 @@ export default function Sharing() {
                             type="email"
                             placeholder="user@email.com"
                             value={inviteEmail}
-                            onChange={(event) => setInviteEmail(event.target.value)}
+                            onChange={(event) =>
+                                setInviteEmail(event.target.value)
+                            }
                         />
                         <InputError message={inviteError ?? undefined} />
                         {inviteSuccess && (

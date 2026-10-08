@@ -51,7 +51,7 @@ export const PeriodCard = ({
                 )}
             </div>
             {isClosed && (
-                <div className="flex-1 text-center text-xs uppercase tracking-[0.2em] text-[#1e7b4f] dark:text-[#7ce0b3]">
+                <div className="flex-1 text-center text-xs tracking-[0.2em] text-[#1e7b4f] uppercase dark:text-[#7ce0b3]">
                     Период закрыт
                 </div>
             )}

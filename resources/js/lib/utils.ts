@@ -1,6 +1,6 @@
-import type { WheelEvent } from 'react';
 import type { InertiaLinkProps } from '@inertiajs/react';
 import { type ClassValue, clsx } from 'clsx';
+import type { WheelEvent } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {

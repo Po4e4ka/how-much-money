@@ -64,9 +64,9 @@ export default function PeriodUnforeseen() {
     const requestFetch = isOnboardingMode ? onboardingApiFetch : apiFetch;
     const [period, setPeriod] = useState<PeriodUnforeseenData>(emptyPeriod);
     const [unforeseenAllocated, setUnforeseenAllocated] = useState(0);
-    const [unforeseenExpenses, setUnforeseenExpenses] = useState<OffIncomeItem[]>(
-        [],
-    );
+    const [unforeseenExpenses, setUnforeseenExpenses] = useState<
+        OffIncomeItem[]
+    >([]);
     const [showDelete, setShowDelete] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -95,9 +95,11 @@ export default function PeriodUnforeseen() {
         if (typeof window === 'undefined') {
             return null;
         }
-        const store = (window as typeof window & {
-            __periodCache?: Record<string, PeriodData>;
-        }).__periodCache;
+        const store = (
+            window as typeof window & {
+                __periodCache?: Record<string, PeriodData>;
+            }
+        ).__periodCache;
         return store?.[cacheKey] ?? null;
     };
 
@@ -418,19 +420,19 @@ export default function PeriodUnforeseen() {
             <Head title={`Непредвиденные расходы · ${periodTitle}`} />
             {isOnboardingMode && <OnboardingDemoBanner />}
             <div
-                className={`relative flex flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-3 font-body text-[#1c1a17] dark:text-[#f7f3ee] sm:gap-8 sm:p-6 ${
+                className={`font-body relative flex flex-1 flex-col gap-6 overflow-x-hidden rounded-xl p-3 text-[#1c1a17] sm:gap-8 sm:p-6 dark:text-[#f7f3ee] ${
                     isOnboardingMode ? 'pt-16' : ''
                 }`}
             >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl bg-aurora opacity-35 dark:hidden" />
-                <div className="pointer-events-none absolute inset-0 hidden rounded-3xl bg-aurora-night opacity-45 dark:block" />
+                <div className="bg-aurora pointer-events-none absolute inset-0 rounded-3xl opacity-35 dark:hidden" />
+                <div className="bg-aurora-night pointer-events-none absolute inset-0 hidden rounded-3xl opacity-45 dark:block" />
 
                 <section className="relative z-10 mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-4 sm:gap-6">
                     <div className="min-w-0">
-                        <p className="text-xs uppercase tracking-[0.4em] text-[#6a5d52] dark:text-white/60">
+                        <p className="text-xs tracking-[0.4em] text-[#6a5d52] uppercase dark:text-white/60">
                             Непредвиденные расходы
                         </p>
-                        <h1 className="mt-3 font-display text-2xl sm:text-3xl">
+                        <h1 className="font-display mt-3 text-2xl sm:text-3xl">
                             {periodTitle}
                         </h1>
                         <p className="mt-2 text-sm text-[#6a5d52] dark:text-white/70">
@@ -463,7 +465,7 @@ export default function PeriodUnforeseen() {
                 )}
 
                 <section
-                    className="relative z-10 grid gap-4 animate-reveal"
+                    className="animate-reveal relative z-10 grid gap-4"
                     style={delay(120)}
                 >
                     {isLoading && (
@@ -480,7 +482,9 @@ export default function PeriodUnforeseen() {
                         <div className="mx-auto grid w-full max-w-3xl min-w-0 gap-4">
                             <div className="rounded-lg border border-black/10 bg-white/80 px-5 py-4 text-sm shadow-[0_20px_40px_-26px_rgba(28,26,23,0.6)] dark:border-white/10 dark:bg-white/10">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <BlockTitle>План на непредвиденные</BlockTitle>
+                                    <BlockTitle>
+                                        План на непредвиденные
+                                    </BlockTitle>
                                     <div ref={allocateButtonRef}>
                                         <PillButton
                                             type="button"

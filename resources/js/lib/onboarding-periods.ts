@@ -159,7 +159,10 @@ export const saveOnboardingPeriods = (periods: OnboardingPeriod[]) => {
     if (typeof window === 'undefined') {
         return;
     }
-    window.localStorage.setItem(STORE_KEY, JSON.stringify(sortPeriods(periods)));
+    window.localStorage.setItem(
+        STORE_KEY,
+        JSON.stringify(sortPeriods(periods)),
+    );
 };
 
 export const resetOnboardingPeriods = () => {
@@ -177,8 +180,10 @@ const nextItemId = (periods: OnboardingPeriod[]) => {
     for (const period of periods) {
         for (const row of period.incomes) maxId = Math.max(maxId, row.id);
         for (const row of period.expenses) maxId = Math.max(maxId, row.id);
-        for (const row of period.external_expenses) maxId = Math.max(maxId, row.id);
-        for (const row of period.unforeseen_expenses) maxId = Math.max(maxId, row.id);
+        for (const row of period.external_expenses)
+            maxId = Math.max(maxId, row.id);
+        for (const row of period.unforeseen_expenses)
+            maxId = Math.max(maxId, row.id);
     }
     return maxId + 1;
 };
@@ -237,7 +242,10 @@ const calculateActualRemaining = (period: OnboardingPeriod): number => {
         0,
     );
     const unforeseenAllocated = Number(period.unforeseen_allocated || 0);
-    const unforeseenOverrun = Math.max(0, unforeseenActual - unforeseenAllocated);
+    const unforeseenOverrun = Math.max(
+        0,
+        unforeseenActual - unforeseenAllocated,
+    );
 
     return (
         incomeTotal -
@@ -294,7 +302,10 @@ export const updateOnboardingPeriod = (
     const current = periods[index];
     const next = { ...current };
 
-    const hasStart = Object.prototype.hasOwnProperty.call(payload, 'start_date');
+    const hasStart = Object.prototype.hasOwnProperty.call(
+        payload,
+        'start_date',
+    );
     const hasEnd = Object.prototype.hasOwnProperty.call(payload, 'end_date');
     if (hasStart || hasEnd) {
         const startDate = String(payload.start_date ?? next.start_date);
@@ -315,8 +326,10 @@ export const updateOnboardingPeriod = (
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, 'daily_expenses')) {
-        next.daily_expenses = (payload.daily_expenses ??
-            {}) as Record<string, number>;
+        next.daily_expenses = (payload.daily_expenses ?? {}) as Record<
+            string,
+            number
+        >;
     }
     if (Object.prototype.hasOwnProperty.call(payload, 'unforeseen_allocated')) {
         next.unforeseen_allocated = Number(payload.unforeseen_allocated ?? 0);
@@ -375,7 +388,9 @@ export const updateOnboardingPeriod = (
         }));
     }
 
-    next.actual_remaining = next.is_closed ? calculateActualRemaining(next) : null;
+    next.actual_remaining = next.is_closed
+        ? calculateActualRemaining(next)
+        : null;
     periods[index] = next;
     saveOnboardingPeriods(periods);
     return next;
@@ -434,7 +449,9 @@ export const pinOnboardingPeriod = (
         return { is_pinned: false };
     }
 
-    const existing = periods.find((item) => item.is_pinned && item.id !== periodId);
+    const existing = periods.find(
+        (item) => item.is_pinned && item.id !== periodId,
+    );
     if (existing && !force) {
         throw new ApiError('Уже есть закрепленный период.', 409, {
             pinned: {
@@ -464,7 +481,8 @@ export const onboardingExpenseSuggestions = (
 
     const select = (period: OnboardingPeriod) => {
         if (type === 'income') return period.incomes.map((item) => item.name);
-        if (type === 'mandatory') return period.expenses.map((item) => item.name);
+        if (type === 'mandatory')
+            return period.expenses.map((item) => item.name);
         if (type === 'external') {
             return period.external_expenses.map((item) => item.name);
         }
@@ -472,13 +490,12 @@ export const onboardingExpenseSuggestions = (
     };
 
     const sortedById = [...periods].sort((a, b) => a.id - b.id);
-    const previous = sortedById
-        .filter((period) => period.id < periodId)
-        .at(-1);
+    const previous = sortedById.filter((period) => period.id < periodId).at(-1);
 
     return {
         previous: previous ? [...new Set(select(previous))].sort() : [],
-        all: [...new Set(sortedById.flatMap((period) => select(period)))].sort(),
+        all: [
+            ...new Set(sortedById.flatMap((period) => select(period))),
+        ].sort(),
     };
 };
-

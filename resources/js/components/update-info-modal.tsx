@@ -59,7 +59,10 @@ const renderMarkdown = (md: string): ReactNode[] => {
 
         if (trimmed.startsWith('### ')) {
             blocks.push(
-                <h4 key={`h4-${blocks.length}`} className="text-lg font-semibold">
+                <h4
+                    key={`h4-${blocks.length}`}
+                    className="text-lg font-semibold"
+                >
                     {renderInline(trimmed.slice(4))}
                 </h4>,
             );
@@ -67,7 +70,10 @@ const renderMarkdown = (md: string): ReactNode[] => {
         }
         if (trimmed.startsWith('## ')) {
             blocks.push(
-                <h3 key={`h3-${blocks.length}`} className="text-xl font-semibold">
+                <h3
+                    key={`h3-${blocks.length}`}
+                    className="text-xl font-semibold"
+                >
                     {renderInline(trimmed.slice(3))}
                 </h3>,
             );
@@ -75,7 +81,10 @@ const renderMarkdown = (md: string): ReactNode[] => {
         }
         if (trimmed.startsWith('# ')) {
             blocks.push(
-                <h2 key={`h2-${blocks.length}`} className="text-2xl font-semibold">
+                <h2
+                    key={`h2-${blocks.length}`}
+                    className="text-2xl font-semibold"
+                >
                     {renderInline(trimmed.slice(2))}
                 </h2>,
             );
@@ -83,7 +92,10 @@ const renderMarkdown = (md: string): ReactNode[] => {
         }
 
         blocks.push(
-            <p key={`p-${blocks.length}`} className="text-sm text-[#6a5d52] dark:text-white/70">
+            <p
+                key={`p-${blocks.length}`}
+                className="text-sm text-[#6a5d52] dark:text-white/70"
+            >
                 {renderInline(trimmed)}
             </p>,
         );

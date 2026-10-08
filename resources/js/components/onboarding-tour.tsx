@@ -171,7 +171,11 @@ const getTooltipPosition = (
     }
 
     return {
-        top: clamp(pos.top, margin, Math.max(margin, vh - tooltipHeight - margin)),
+        top: clamp(
+            pos.top,
+            margin,
+            Math.max(margin, vh - tooltipHeight - margin),
+        ),
         left: clamp(
             pos.left,
             margin,
@@ -532,7 +536,11 @@ export function OnboardingTour({
     }, [open, index, currentStep]);
 
     useEffect(() => {
-        if (!open || !currentStep?.captureClick || !currentStep.targetRef.current) {
+        if (
+            !open ||
+            !currentStep?.captureClick ||
+            !currentStep.targetRef.current
+        ) {
             return;
         }
 
@@ -570,14 +578,17 @@ export function OnboardingTour({
         }
 
         const delayMs = Math.max(0, currentStep.advanceDelayMs ?? 0);
-        const timeoutId = window.setTimeout(() => {
-            if (index === steps.length - 1) {
-                onClose();
-                return;
-            }
+        const timeoutId = window.setTimeout(
+            () => {
+                if (index === steps.length - 1) {
+                    onClose();
+                    return;
+                }
 
-            setIndex((prev) => Math.min(prev + 1, steps.length - 1));
-        }, delayMs > 0 ? delayMs : 0);
+                setIndex((prev) => Math.min(prev + 1, steps.length - 1));
+            },
+            delayMs > 0 ? delayMs : 0,
+        );
 
         return () => window.clearTimeout(timeoutId);
     }, [open, currentStep, canGoNext, index, steps.length, onClose]);
@@ -668,21 +679,30 @@ export function OnboardingTour({
             ) : (
                 <div
                     className="pointer-events-none fixed inset-0"
-                    style={{ zIndex: OVERLAY_Z, background: 'rgba(0, 0, 0, 0.42)' }}
+                    style={{
+                        zIndex: OVERLAY_Z,
+                        background: 'rgba(0, 0, 0, 0.42)',
+                    }}
                 />
             )}
 
             {hasSpotlight && tooltipPosition && (
                 <div
                     ref={tooltipRef}
-                    className="fixed w-[min(360px,calc(100vw-32px))] max-md:w-[calc(100vw-32px)] rounded-2xl border border-white/45 bg-[#1b1227]/90 p-4 text-white shadow-[0_18px_36px_-18px_rgba(0,0,0,0.85)] backdrop-blur-sm"
+                    className="fixed w-[min(360px,calc(100vw-32px))] rounded-2xl border border-white/45 bg-[#1b1227]/90 p-4 text-white shadow-[0_18px_36px_-18px_rgba(0,0,0,0.85)] backdrop-blur-sm max-md:w-[calc(100vw-32px)]"
                     style={tooltipStyle}
                 >
-                    <div className="mb-2 text-lg leading-none text-[#baa7ff]">↘</div>
+                    <div className="mb-2 text-lg leading-none text-[#baa7ff]">
+                        ↘
+                    </div>
                     {currentStep.title && (
-                        <h3 className="text-lg font-semibold">{currentStep.title}</h3>
+                        <h3 className="text-lg font-semibold">
+                            {currentStep.title}
+                        </h3>
                     )}
-                    <p className="mt-1 text-sm leading-relaxed">{currentStep.text}</p>
+                    <p className="mt-1 text-sm leading-relaxed">
+                        {currentStep.text}
+                    </p>
 
                     <div className="mt-4 flex items-center justify-between">
                         <span className="text-xs text-white/70">
@@ -694,7 +714,9 @@ export function OnboardingTour({
                                     type="button"
                                     className="rounded-lg border border-white/25 px-3 py-1.5 text-xs text-white/90 hover:bg-white/10"
                                     onClick={() =>
-                                        setIndex((prev) => Math.max(prev - 1, 0))
+                                        setIndex((prev) =>
+                                            Math.max(prev - 1, 0),
+                                        )
                                     }
                                 >
                                     Назад
@@ -711,7 +733,10 @@ export function OnboardingTour({
                                             return;
                                         }
                                         setIndex((prev) =>
-                                            Math.min(prev + 1, steps.length - 1),
+                                            Math.min(
+                                                prev + 1,
+                                                steps.length - 1,
+                                            ),
                                         );
                                     }}
                                 >
