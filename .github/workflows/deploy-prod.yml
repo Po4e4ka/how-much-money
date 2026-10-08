@@ -4,8 +4,9 @@ on:
   pull_request:
     branches: [master]
 concurrency:
-  group: production-environment
-  cancel-in-progress: false
+  # PR verification must not occupy the production deployment lock.
+  group: production-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 env:
