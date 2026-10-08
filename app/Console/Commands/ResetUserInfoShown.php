@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
+use Illuminate\Console\Command;
 
 class ResetUserInfoShown extends Command
 {
@@ -14,7 +14,7 @@ class ResetUserInfoShown extends Command
     public function handle()
     {
         $updated = User::query()->update(['is_info_shown' => false]);
-        $this->info("Все пользователи снова увидят модалку");
+        $this->info('Все пользователи снова увидят модалку');
 
         return self::SUCCESS;
     }

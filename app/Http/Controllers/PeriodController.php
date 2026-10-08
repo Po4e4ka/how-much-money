@@ -20,6 +20,7 @@ class PeriodController extends Controller
             if ($period && $period->user_id !== $userId) {
                 abort(403);
             }
+
             return $userId;
         }
 
@@ -41,6 +42,7 @@ class PeriodController extends Controller
 
         return $viewerId;
     }
+
     public function index(Request $request)
     {
         $periods = Period::query()
@@ -92,7 +94,7 @@ class PeriodController extends Controller
             'expenses' => function ($query) {
                 $query->select('expenses.id', 'expenses.name', 'expenses.type')
                     ->withPivot(['planned_amount', 'actual_amount']);
-            }
+            },
         ]);
 
         $incomes = $period->expenses
@@ -259,7 +261,7 @@ class PeriodController extends Controller
             'force' => ['nullable', 'boolean'],
         ]);
 
-        $force = (bool)($data['force'] ?? false);
+        $force = (bool) ($data['force'] ?? false);
         $startDate = Carbon::parse($data['start_date']);
         $endDate = Carbon::parse($data['end_date']);
 
@@ -279,7 +281,7 @@ class PeriodController extends Controller
             ->orderBy('start_date')
             ->first();
 
-        if ($overlap && !$force) {
+        if ($overlap && ! $force) {
             return response()->json([
                 'message' => 'Период пересекается с существующим.',
                 'overlap' => [

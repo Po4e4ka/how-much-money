@@ -1,14 +1,14 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use Laravel\Fortify\Features;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\UserInfoController;
 use App\Http\Controllers\ViewerController;
 use App\Models\User;
 use App\Models\Viewer;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Laravel\Fortify\Features;
 
 Route::get('/', function () {
     return Inertia::render('welcome', [
@@ -68,7 +68,7 @@ Route::get('shared/{user}', function (\Illuminate\Http\Request $request, User $u
         ->where('status', Viewer::STATUS_ACTIVE)
         ->exists();
 
-    if (!$hasAccess) {
+    if (! $hasAccess) {
         abort(403);
     }
 
@@ -87,7 +87,7 @@ Route::get('shared/{user}/periods/{period}', function (\Illuminate\Http\Request 
         ->where('status', Viewer::STATUS_ACTIVE)
         ->exists();
 
-    if (!$hasAccess) {
+    if (! $hasAccess) {
         abort(403);
     }
 
@@ -107,7 +107,7 @@ Route::get('shared/{user}/periods/{period}/daily', function (\Illuminate\Http\Re
         ->where('status', Viewer::STATUS_ACTIVE)
         ->exists();
 
-    if (!$hasAccess) {
+    if (! $hasAccess) {
         abort(403);
     }
 
@@ -127,7 +127,7 @@ Route::get('shared/{user}/periods/{period}/unforeseen', function (\Illuminate\Ht
         ->where('status', Viewer::STATUS_ACTIVE)
         ->exists();
 
-    if (!$hasAccess) {
+    if (! $hasAccess) {
         abort(403);
     }
 

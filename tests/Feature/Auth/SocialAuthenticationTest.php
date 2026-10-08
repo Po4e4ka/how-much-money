@@ -72,7 +72,7 @@ class SocialAuthenticationTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $payload
+     * @param  array<string, string>  $payload
      */
     private function buildTelegramHash(array $payload): string
     {

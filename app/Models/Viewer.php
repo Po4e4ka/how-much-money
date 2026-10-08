@@ -11,6 +11,7 @@ class Viewer extends Model
     use HasFactory;
 
     public const STATUS_ACTIVE = 'active';
+
     public const STATUS_BLOCKED = 'blocked';
 
     protected $fillable = [
