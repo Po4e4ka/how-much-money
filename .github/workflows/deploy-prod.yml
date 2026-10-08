@@ -1,6 +1,8 @@
 name: deploy production (manual bootstrap)
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [master]
 concurrency:
   group: production-environment
   cancel-in-progress: false
@@ -10,7 +12,7 @@ env:
   PROD_IMAGE_REPOSITORY: ghcr.io/po4e4ka/how-much-money-prod
 jobs:
   verify:
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -23,17 +25,24 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: |
+      - name: Install dependencies
+        run: |
           cp .env.example .env
           composer install --no-interaction --prefer-dist --optimize-autoloader
           php artisan key:generate
           npm ci
-          ./vendor/bin/phpunit
-          composer run test:lint
-          npx eslint .
+      - name: PHPUnit
+        run: ./vendor/bin/phpunit
+      - name: Check PHP formatting (Pint)
+        run: composer run test:lint
+      - name: Check frontend ESLint
+        run: npx eslint .
+      - name: Validate deployment script and Docker Compose
+        run: |
           bash -n containers/scripts/deploy-prod.sh
           HMM_PROD_IMAGE=ghcr.io/po4e4ka/how-much-money-prod:0000000000000000000000000000000000000000 PROD_ROOT=/tmp/hmm-prod docker compose -f docker-compose-prod.yaml config --quiet
   build-and-push:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     needs: verify
     runs-on: ubuntu-latest
     permissions:
@@ -72,6 +81,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
   deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     needs: build-and-push
     runs-on: [self-hosted, linux, how-much-money]
     permissions:
